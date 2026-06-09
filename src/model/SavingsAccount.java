@@ -7,10 +7,9 @@ public class SavingsAccount extends Account {
     }
 
     @Override
-    public void withdraw(double amount) {
+    public void withdraw(double amount) throws exception.InSufficientFundsException, exception.InvalidAmountException {
         if (amount <= 0) {
-            System.out.println("Withdrawal amount must be positive");
-            return;
+            throw new exception.InvalidAmountException(amount);
         }
 
         if (getBalance() >= amount) {
@@ -19,7 +18,7 @@ public class SavingsAccount extends Account {
             System.out.println("Successfully withdrew: BDT " + amount);
             System.out.println("New Balance: " + getBalance());
         } else {
-            System.out.println("Transaction failed: Insufficient funds. Available balance: " + getBalance());
+            throw new exception.InSufficientFundsException(amount, getBalance());
         }
     }
 }

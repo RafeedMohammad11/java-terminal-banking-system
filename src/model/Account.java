@@ -2,7 +2,7 @@ package model;
 
 public abstract class Account {
     private final String accountNumber;
-    private final String holderName;
+    private String holderName;
     private String email;
     private String phone;
     private double balance;
@@ -25,6 +25,10 @@ public abstract class Account {
 
     public String getHolderName() {
         return holderName;
+    }
+
+    public void setHolderName(String holderName) {
+        this.holderName = holderName;
     }
 
     public String getEmail() {
@@ -54,7 +58,7 @@ public abstract class Account {
         }
     }
 
-    public abstract void withdraw(double amount);
+    public abstract void withdraw(double amount) throws exception.InSufficientFundsException, exception.InvalidAmountException;
 
     protected void updateBalance(double newBalance) {
         this.balance = newBalance;

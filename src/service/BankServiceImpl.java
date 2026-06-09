@@ -9,6 +9,10 @@ import model.CurrentAccount;
 import model.SavingsAccount;
 
 import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -49,7 +53,9 @@ public class BankServiceImpl implements BankService {
         if (account == null) {
             throw new AccountNotFoundException(accountNumber);
         }
-        throw new UnsupportedOperationException("Account update is not implemented yet");
+        account.setHolderName(newHolderName);
+        account.setEmail(newEmail);
+        account.setPhone(newPhone);
     }
 
     @Override
@@ -69,25 +75,45 @@ public class BankServiceImpl implements BankService {
     @Override
     public void deposit(String accountNumber, double amount)
             throws AccountNotFoundException, InvalidAmountException, InSufficientFundsException {
-        throw new UnsupportedOperationException("Deposit is not implemented yet");
+        Account account = findAccountByNumber(accountNumber);
+        if (account == null) {
+            throw new AccountNotFoundException(accountNumber);
+        }
+        account.deposit(amount);
     }
 
     @Override
     public void withdraw(String accountNumber, double amount)
             throws AccountNotFoundException, InvalidAmountException, InSufficientFundsException {
-        throw new UnsupportedOperationException("Withdraw is not implemented yet");
+        Account account = findAccountByNumber(accountNumber);
+        if (account == null) {
+            throw new AccountNotFoundException(accountNumber);
+        }
+        account.withdraw(amount);
     }
 
     @Override
     public void transfer(String fromAccountNumber, String toAccountNumber, double amount)
             throws AccountNotFoundException, InvalidAmountException, InSufficientFundsException {
-        throw new UnsupportedOperationException("Transfer is not implemented yet");
+        Account fromAccount = findAccountByNumber(fromAccountNumber);
+        if (fromAccount == null) {
+            throw new AccountNotFoundException(fromAccountNumber);
+        }
+        Account toAccount = findAccountByNumber(toAccountNumber);
+        if (toAccount == null) {
+            throw new AccountNotFoundException(toAccountNumber);
+        }
+        
+        fromAccount.withdraw(amount);
+        toAccount.deposit(amount);
     }
 
     @Override
     public void saveToFile() throws Exception {
-        String filePath = "data.csv";
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
+        Path filePath = Paths.get("data.csv");
+        try (BufferedWriter writer = Files.newBufferedWriter(filePath,
+                StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING,
+                StandardOpenOption.WRITE)) {
             // Write header
             writer.write("AccountType,AccountNumber,HolderName,Email,Phone,Balance,OverDraftLimit");
             writer.newLine();
@@ -104,29 +130,30 @@ public class BankServiceImpl implements BankService {
                 if (account instanceof CurrentAccount) {
                     CurrentAccount currentAccount = (CurrentAccount) account;
                     double overDraftLimit = currentAccount.getOverDraftLimit();
-                    writer.write(String.format("%s,%s,%s,%s,%s,%.2f,%.2f",
+                    writer.write(String.format(java.util.Locale.US, "%s,%s,%s,%s,%s,%.2f,%.2f",
                             accountType, accountNumber, holderName, email, phone, balance, overDraftLimit));
                 } else {
-                    writer.write(String.format("%s,%s,%s,%s,%s,%.2f,",
+                    writer.write(String.format(java.util.Locale.US, "%s,%s,%s,%s,%s,%.2f,",
                             accountType, accountNumber, holderName, email, phone, balance));
                 }
                 writer.newLine();
             }
-            System.out.println("Accounts saved to " + filePath);
+            System.out.println("Accounts saved to " + filePath.toAbsolutePath());
+        } catch (IOException e) {
+            throw new IOException("Unable to write accounts to " + filePath.toAbsolutePath(), e);
         }
     }
 
     @Override
     public void loadFromFile() throws Exception {
-        String filePath = "data.csv";
-        File file = new File(filePath);
-        if (!file.exists()) {
-            System.out.println("No saved data file found: " + filePath);
+        Path filePath = Paths.get("data.csv");
+        if (!Files.exists(filePath)) {
+            System.out.println("No saved data file found: " + filePath.toAbsolutePath());
             return;
         }
 
         accounts.clear();
-        try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
+        try (BufferedReader reader = Files.newBufferedReader(filePath)) {
             String line;
             int lineNumber = 0;
 
@@ -137,7 +164,7 @@ public class BankServiceImpl implements BankService {
                     continue;
                 }
 
-                String[] fields = line.split(",");
+                String[] fields = line.split(",", -1);
                 if (fields.length < 6) {
                     System.out.println("Invalid line format at line " + lineNumber);
                     continue;
@@ -156,7 +183,6 @@ public class BankServiceImpl implements BankService {
                     account = new CurrentAccount(accountNumber, holderName, email, phone, balance, overDraftLimit);
                 } else {
                     account = new SavingsAccount(accountNumber, holderName, balance);
-                    // Need to set email and phone if they exist
                     if (!email.isBlank() || !phone.isBlank()) {
                         account.setEmail(email);
                         account.setPhone(phone);
@@ -165,7 +191,9 @@ public class BankServiceImpl implements BankService {
 
                 accounts.add(account);
             }
-            System.out.println("Accounts loaded from " + filePath);
+            System.out.println("Accounts loaded from " + filePath.toAbsolutePath());
+        } catch (IOException e) {
+            throw new IOException("Unable to read accounts from " + filePath.toAbsolutePath(), e);
         }
     }
 
