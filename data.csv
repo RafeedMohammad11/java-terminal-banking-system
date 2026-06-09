@@ -1,0 +1,4 @@
+AccountType,AccountNumber,HolderName,Email,Phone,Balance,OverDraftLimit
+SavingsAccount,10012-234112-2323,Rafeed Mohammad,,,10000.00,
+CurrentAccount,10012-234112-2324,Ahmed Khan,ahmed@bank.com,01700000001,50000.00,10000.00
+SavingsAccount,10012-234112-2325,Fatima Ali,,,25000.00,
