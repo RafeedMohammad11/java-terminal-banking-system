@@ -12,6 +12,11 @@ public abstract class Account {
        this.balance = balance;
    }
 
+   public void displayInfo()
+   {
+       System.out.println("Account Number: " + accountNumber + " Balance: " + balance);
+   }
+
    public String getAccountNumber() {
        return accountNumber;
    }
