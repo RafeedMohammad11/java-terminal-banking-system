@@ -2,8 +2,8 @@ package model;
 
 public class SavingsAccount extends Account {
 
-    public SavingsAccount(String accountNumber, String holderName, double initialBalance) {
-        super(accountNumber, holderName, "", "", initialBalance);
+    public SavingsAccount(String accountNumber, String holderName, String email, String phone, double initialBalance) {
+        super(accountNumber, holderName, email, phone, initialBalance);
     }
 
     @Override

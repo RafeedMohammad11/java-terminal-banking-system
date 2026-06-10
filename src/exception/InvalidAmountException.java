@@ -1,6 +1,6 @@
 package exception;
 
-public class InvalidAmountException extends RuntimeException {
+public class InvalidAmountException extends Exception {
     private double amount;
 
     public InvalidAmountException(double amount)

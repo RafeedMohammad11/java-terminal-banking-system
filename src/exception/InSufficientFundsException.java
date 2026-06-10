@@ -1,6 +1,6 @@
 package exception;
 
-public class InSufficientFundsException extends RuntimeException {
+public class InSufficientFundsException extends Exception {
     private double requestedAmount;
     private double availableBalance;
 

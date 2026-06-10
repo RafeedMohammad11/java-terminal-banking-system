@@ -8,6 +8,9 @@ public abstract class Account {
     private double balance;
 
     public Account(String accountNumber, String holderName, String email, String phone, double balance) {
+        if (balance < 0) {
+            throw new IllegalArgumentException("Initial balance cannot be negative");
+        }
         this.accountNumber = accountNumber;
         this.holderName = holderName;
         this.email = email;
@@ -15,8 +18,28 @@ public abstract class Account {
         this.balance = balance;
     }
 
+    public static void displayHeader() {
+        System.out.println("---------------------------------------------------------------------------------------------------");
+        System.out.printf(
+                "| %-12s | %-20s | %-25s | %-15s | %-10s |%n",
+                "Account No",
+                "Holder Name",
+                "Email",
+                "Phone",
+                "Balance"
+        );
+        System.out.println("---------------------------------------------------------------------------------------------------");
+    }
+
     public void displayInfo() {
-        System.out.println("Account Number: " + accountNumber + " Balance: " + balance);
+        System.out.printf(
+                "| %-12s | %-20s | %-25s | %-15s | %10.2f |%n",
+                accountNumber,
+                holderName,
+                email,
+                phone,
+                balance
+        );
     }
 
     public String getAccountNumber() {
@@ -51,14 +74,16 @@ public abstract class Account {
         return balance;
     }
 
-    public void deposit(double amount) {
-        if (amount > 0) {
-            this.balance += amount;
-            System.out.println("Deposited: BDT. " + amount);
+    public void deposit(double amount) throws exception.InvalidAmountException {
+        if (amount <= 0) {
+            throw new exception.InvalidAmountException(amount);
         }
+        this.balance += amount;
+        System.out.println("Deposited: BDT. " + amount);
     }
 
-    public abstract void withdraw(double amount) throws exception.InSufficientFundsException, exception.InvalidAmountException;
+    public abstract void withdraw(double amount)
+            throws exception.InSufficientFundsException, exception.InvalidAmountException;
 
     protected void updateBalance(double newBalance) {
         this.balance = newBalance;

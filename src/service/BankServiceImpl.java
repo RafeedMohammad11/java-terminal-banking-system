@@ -103,7 +103,7 @@ public class BankServiceImpl implements BankService {
         if (toAccount == null) {
             throw new AccountNotFoundException(toAccountNumber);
         }
-        
+
         fromAccount.withdraw(amount);
         toAccount.deposit(amount);
     }
@@ -111,34 +111,35 @@ public class BankServiceImpl implements BankService {
     @Override
     public void saveToFile() throws Exception {
         Path filePath = Paths.get("data.csv");
-        try (BufferedWriter writer = Files.newBufferedWriter(filePath,
-                StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING,
-                StandardOpenOption.WRITE)) {
-            // Write header
-            writer.write("AccountType,AccountNumber,HolderName,Email,Phone,Balance,OverDraftLimit");
-            writer.newLine();
+        StringBuilder csvContent = new StringBuilder();
+        csvContent.append("AccountType,AccountNumber,HolderName,Email,Phone,Balance,OverDraftLimit")
+                .append(System.lineSeparator());
 
-            // Write each account
-            for (Account account : accounts) {
-                String accountType = account.getClass().getSimpleName();
-                String accountNumber = account.getAccountNumber();
-                String holderName = account.getHolderName();
-                String email = account.getEmail() != null ? account.getEmail() : "";
-                String phone = account.getPhone() != null ? account.getPhone() : "";
-                double balance = account.getBalance();
+        for (Account account : accounts) {
+            String accountType = account.getClass().getSimpleName();
+            String accountNumber = account.getAccountNumber();
+            String holderName = account.getHolderName();
+            String email = account.getEmail() != null ? account.getEmail() : "";
+            String phone = account.getPhone() != null ? account.getPhone() : "";
+            double balance = account.getBalance();
+            double overDraftLimit = 0.0;
 
-                if (account instanceof CurrentAccount) {
-                    CurrentAccount currentAccount = (CurrentAccount) account;
-                    double overDraftLimit = currentAccount.getOverDraftLimit();
-                    writer.write(String.format(java.util.Locale.US, "%s,%s,%s,%s,%s,%.2f,%.2f",
-                            accountType, accountNumber, holderName, email, phone, balance, overDraftLimit));
-                } else {
-                    writer.write(String.format(java.util.Locale.US, "%s,%s,%s,%s,%s,%.2f,",
-                            accountType, accountNumber, holderName, email, phone, balance));
-                }
-                writer.newLine();
+            if (account instanceof CurrentAccount) {
+                overDraftLimit = ((CurrentAccount) account).getOverDraftLimit();
             }
-            System.out.println("Accounts saved to " + filePath.toAbsolutePath());
+
+            csvContent.append(String.format(java.util.Locale.US, "%s,%s,%s,%s,%s,%.2f,%.2f",
+                    accountType, accountNumber, holderName, email, phone, balance, overDraftLimit))
+                    .append(System.lineSeparator());
+        }
+
+        try {
+            long startTime = System.nanoTime();
+            System.out.println("Saving accounts to " + filePath.toAbsolutePath() + "...");
+            Files.writeString(filePath, csvContent.toString(), java.nio.charset.StandardCharsets.UTF_8,
+                    StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+            long elapsedMs = (System.nanoTime() - startTime) / 1_000_000;
+            System.out.println("Accounts saved to " + filePath.toAbsolutePath() + " in " + elapsedMs + " ms");
         } catch (IOException e) {
             throw new IOException("Unable to write accounts to " + filePath.toAbsolutePath(), e);
         }
@@ -178,15 +179,14 @@ public class BankServiceImpl implements BankService {
                 double balance = Double.parseDouble(fields[5]);
 
                 Account account;
-                if ("CurrentAccount".equals(accountType) && fields.length > 6 && !fields[6].isBlank()) {
-                    double overDraftLimit = Double.parseDouble(fields[6]);
+                if ("CurrentAccount".equals(accountType)) {
+                    double overDraftLimit = 0.0;
+                    if (fields.length > 6 && !fields[6].isBlank()) {
+                        overDraftLimit = Double.parseDouble(fields[6]);
+                    }
                     account = new CurrentAccount(accountNumber, holderName, email, phone, balance, overDraftLimit);
                 } else {
-                    account = new SavingsAccount(accountNumber, holderName, balance);
-                    if (!email.isBlank() || !phone.isBlank()) {
-                        account.setEmail(email);
-                        account.setPhone(phone);
-                    }
+                    account = new SavingsAccount(accountNumber, holderName, email, phone, balance);
                 }
 
                 accounts.add(account);
