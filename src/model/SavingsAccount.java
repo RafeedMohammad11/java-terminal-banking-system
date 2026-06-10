@@ -12,7 +12,7 @@ public class SavingsAccount extends Account {
             throw new exception.InvalidAmountException(amount);
         }
 
-        if (getBalance() >= amount) {
+        if (getBalance() - amount >= 500) {
             double newBalance = getBalance() - amount;
             updateBalance(newBalance);
             System.out.println("Successfully withdrew: BDT " + amount);
