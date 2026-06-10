@@ -13,9 +13,68 @@ public class BankController {
     private final BankService bankService;
     private final Scanner scanner;
 
+    @FunctionalInterface
+    private interface StringValidator {
+        void validate(String val) throws IllegalArgumentException;
+    }
+
+    @FunctionalInterface
+    private interface DoubleValidator {
+        void validate(double val) throws IllegalArgumentException;
+    }
+
+    private static class OperationCancelledException extends Exception {
+        public OperationCancelledException() {
+            super("Operation cancelled by user.");
+        }
+    }
+
     public BankController(BankService bankService) {
         this.bankService = bankService;
         this.scanner = new Scanner(System.in);
+    }
+
+    private String readString(String prompt, boolean required, StringValidator validator) throws OperationCancelledException {
+        while (true) {
+            System.out.print(prompt);
+            String input = scanner.nextLine().trim();
+            if (input.equalsIgnoreCase("cancel")) {
+                throw new OperationCancelledException();
+            }
+            if (required && input.isBlank()) {
+                System.out.println("This field is required. Type 'cancel' to abort.");
+                continue;
+            }
+            try {
+                if (validator != null) {
+                    validator.validate(input);
+                }
+                return input;
+            } catch (IllegalArgumentException e) {
+                System.out.println("Error: " + e.getMessage() + " Type 'cancel' to abort.");
+            }
+        }
+    }
+
+    private double readDouble(String prompt, DoubleValidator validator) throws OperationCancelledException {
+        while (true) {
+            System.out.print(prompt);
+            String input = scanner.nextLine().trim();
+            if (input.equalsIgnoreCase("cancel")) {
+                throw new OperationCancelledException();
+            }
+            try {
+                double value = Double.parseDouble(input);
+                if (validator != null) {
+                    validator.validate(value);
+                }
+                return value;
+            } catch (NumberFormatException e) {
+                System.out.println("Invalid numeric value. Please enter a valid number. Type 'cancel' to abort.");
+            } catch (IllegalArgumentException e) {
+                System.out.println("Error: " + e.getMessage() + " Type 'cancel' to abort.");
+            }
+        }
     }
 
     public void start() {
@@ -70,37 +129,26 @@ public class BankController {
 
     private void createSavingsAccount() {
         try {
-            System.out.print("Enter account number: ");
-            String accountNumber = scanner.nextLine().trim();
-            
-            try {
-                bankService.findAccount(accountNumber);
-                System.out.println("Error: Duplicate account exists with account number: " + accountNumber);
-                return;
-            } catch (AccountNotFoundException e) {
-                // Account does not exist, safe to proceed
-            }
-            System.out.print("Enter holder name: ");
-            String holderName = scanner.nextLine().trim();
-            System.out.print("Enter email: ");
-            String email = scanner.nextLine().trim();
-            System.out.print("Enter phone: ");
-            String phone = scanner.nextLine().trim();
-            System.out.print("Enter initial balance: ");
-            double balance = Double.parseDouble(scanner.nextLine().trim());
-
-            if (email.isBlank() || phone.isBlank()) {
-                System.out.println("Email and phone are required for savings accounts.");
-                return;
-            }
+            String accountNumber = readString("Enter account number: ", true, val -> {
+                try {
+                    bankService.findAccount(val);
+                    throw new IllegalArgumentException("Duplicate account exists with account number: " + val);
+                } catch (AccountNotFoundException e) {
+                    // expected
+                }
+            });
+            String holderName = readString("Enter holder name: ", true, null);
+            String email = readString("Enter email: ", true, null);
+            String phone = readString("Enter phone: ", true, null);
+            double balance = readDouble("Enter initial balance: ", val -> {
+                if (val < 0) throw new IllegalArgumentException("Initial balance cannot be negative");
+            });
 
             SavingsAccount account = new SavingsAccount(accountNumber, holderName, email, phone, balance);
             bankService.createAccount(account);
             System.out.println("Savings account created successfully.");
-        } catch (DuplicateAccountException e) {
-            System.out.println("Error: " + e.getMessage());
-        } catch (NumberFormatException e) {
-            System.out.println("Invalid balance value. Please enter a valid number.");
+        } catch (OperationCancelledException e) {
+            System.out.println("Operation cancelled.");
         } catch (Exception e) {
             System.out.println("Failed to create savings account: " + e.getMessage());
         }
@@ -108,35 +156,30 @@ public class BankController {
 
     private void createCurrentAccount() {
         try {
-            System.out.print("Enter account number: ");
-            String accountNumber = scanner.nextLine().trim();
-            
-            try {
-                bankService.findAccount(accountNumber);
-                System.out.println("Error: Duplicate account exists with account number: " + accountNumber);
-                return;
-            } catch (AccountNotFoundException e) {
-                // Account does not exist, safe to proceed
-            }
-            System.out.print("Enter holder name: ");
-            String holderName = scanner.nextLine().trim();
-            System.out.print("Enter email: ");
-            String email = scanner.nextLine().trim();
-            System.out.print("Enter phone: ");
-            String phone = scanner.nextLine().trim();
-            System.out.print("Enter initial balance: ");
-            double balance = Double.parseDouble(scanner.nextLine().trim());
-            System.out.print("Enter overdraft limit: ");
-            double overdraftLimit = Double.parseDouble(scanner.nextLine().trim());
+            String accountNumber = readString("Enter account number: ", true, val -> {
+                try {
+                    bankService.findAccount(val);
+                    throw new IllegalArgumentException("Duplicate account exists with account number: " + val);
+                } catch (AccountNotFoundException e) {
+                    // expected
+                }
+            });
+            String holderName = readString("Enter holder name: ", true, null);
+            String email = readString("Enter email: ", false, null);
+            String phone = readString("Enter phone: ", false, null);
+            double balance = readDouble("Enter initial balance: ", val -> {
+                if (val < 0) throw new IllegalArgumentException("Initial balance cannot be negative");
+            });
+            double overdraftLimit = readDouble("Enter overdraft limit: ", val -> {
+                if (val < 0) throw new IllegalArgumentException("Overdraft limit cannot be negative");
+            });
 
             CurrentAccount account = new CurrentAccount(accountNumber, holderName, email, phone, balance,
                     overdraftLimit);
             bankService.createAccount(account);
             System.out.println("Current account created successfully.");
-        } catch (DuplicateAccountException e) {
-            System.out.println("Error: " + e.getMessage());
-        } catch (NumberFormatException e) {
-            System.out.println("Invalid numeric value. Please enter a valid number.");
+        } catch (OperationCancelledException e) {
+            System.out.println("Operation cancelled.");
         } catch (Exception e) {
             System.out.println("Failed to create current account: " + e.getMessage());
         }
@@ -180,17 +223,21 @@ public class BankController {
 
     private void updateAccount() {
         try {
-            System.out.print("Enter account number to update: ");
-            String accountNumber = scanner.nextLine().trim();
-            System.out.print("Enter new holder name: ");
-            String holderName = scanner.nextLine().trim();
-            System.out.print("Enter new email: ");
-            String email = scanner.nextLine().trim();
-            System.out.print("Enter new phone: ");
-            String phone = scanner.nextLine().trim();
+            String accountNumber = readString("Enter account number to update: ", true, val -> {
+                try {
+                    bankService.findAccount(val);
+                } catch (Exception e) {
+                    throw new IllegalArgumentException(e.getMessage());
+                }
+            });
+            String holderName = readString("Enter new holder name: ", true, null);
+            String email = readString("Enter new email: ", false, null);
+            String phone = readString("Enter new phone: ", false, null);
 
             bankService.updateAccount(accountNumber, holderName, email, phone);
             System.out.println("Account updated successfully.");
+        } catch (OperationCancelledException e) {
+            System.out.println("Operation cancelled.");
         } catch (Exception e) {
             System.out.println("Failed to update account: " + e.getMessage());
         }
@@ -198,15 +245,21 @@ public class BankController {
 
     private void deposit() {
         try {
-            System.out.print("Enter account number: ");
-            String accountNumber = scanner.nextLine().trim();
-            System.out.print("Enter amount to deposit: ");
-            double amount = Double.parseDouble(scanner.nextLine().trim());
+            String accountNumber = readString("Enter account number: ", true, val -> {
+                try {
+                    bankService.findAccount(val);
+                } catch (Exception e) {
+                    throw new IllegalArgumentException(e.getMessage());
+                }
+            });
+            double amount = readDouble("Enter amount to deposit: ", val -> {
+                if (val <= 0) throw new IllegalArgumentException("Amount must be greater than zero");
+            });
 
             bankService.deposit(accountNumber, amount);
             System.out.println("Deposit successful.");
-        } catch (NumberFormatException e) {
-            System.out.println("Invalid amount. Please enter a valid number.");
+        } catch (OperationCancelledException e) {
+            System.out.println("Operation cancelled.");
         } catch (Exception e) {
             System.out.println("Failed to deposit: " + e.getMessage());
         }
@@ -214,14 +267,34 @@ public class BankController {
 
     private void withdraw() {
         try {
-            System.out.print("Enter account number: ");
-            String accountNumber = scanner.nextLine().trim();
-            System.out.print("Enter amount to withdraw: ");
-            double amount = Double.parseDouble(scanner.nextLine().trim());
+            String accountNumber = readString("Enter account number: ", true, val -> {
+                try {
+                    bankService.findAccount(val);
+                } catch (Exception e) {
+                    throw new IllegalArgumentException(e.getMessage());
+                }
+            });
+            double amount = readDouble("Enter amount to withdraw: ", val -> {
+                if (val <= 0) {
+                    throw new IllegalArgumentException("Amount must be greater than zero");
+                }
+                try {
+                    Account account = bankService.findAccount(accountNumber);
+                    double available = account.getBalance();
+                    if (account instanceof CurrentAccount) {
+                        available += ((CurrentAccount) account).getOverDraftLimit();
+                    }
+                    if (available < val) {
+                        throw new IllegalArgumentException("Insufficient funds. Request: " + val + ", Available: " + available);
+                    }
+                } catch (Exception e) {
+                    throw new IllegalArgumentException(e.getMessage());
+                }
+            });
 
             bankService.withdraw(accountNumber, amount);
-        } catch (NumberFormatException e) {
-            System.out.println("Invalid amount. Please enter a valid number.");
+        } catch (OperationCancelledException e) {
+            System.out.println("Operation cancelled.");
         } catch (Exception e) {
             System.out.println("Failed to withdraw: " + e.getMessage());
         }
@@ -229,17 +302,45 @@ public class BankController {
 
     private void transfer() {
         try {
-            System.out.print("Enter source account number: ");
-            String fromAccount = scanner.nextLine().trim();
-            System.out.print("Enter destination account number: ");
-            String toAccount = scanner.nextLine().trim();
-            System.out.print("Enter amount to transfer: ");
-            double amount = Double.parseDouble(scanner.nextLine().trim());
+            String fromAccount = readString("Enter source account number: ", true, val -> {
+                try {
+                    bankService.findAccount(val);
+                } catch (Exception e) {
+                    throw new IllegalArgumentException(e.getMessage());
+                }
+            });
+            String toAccount = readString("Enter destination account number: ", true, val -> {
+                try {
+                    bankService.findAccount(val);
+                } catch (Exception e) {
+                    throw new IllegalArgumentException(e.getMessage());
+                }
+                if (val.equals(fromAccount)) {
+                    throw new IllegalArgumentException("Source and destination accounts cannot be the same");
+                }
+            });
+            double amount = readDouble("Enter amount to transfer: ", val -> {
+                if (val <= 0) {
+                    throw new IllegalArgumentException("Amount must be greater than zero");
+                }
+                try {
+                    Account account = bankService.findAccount(fromAccount);
+                    double available = account.getBalance();
+                    if (account instanceof CurrentAccount) {
+                        available += ((CurrentAccount) account).getOverDraftLimit();
+                    }
+                    if (available < val) {
+                        throw new IllegalArgumentException("Insufficient funds. Request: " + val + ", Available: " + available);
+                    }
+                } catch (Exception e) {
+                    throw new IllegalArgumentException(e.getMessage());
+                }
+            });
 
             bankService.transfer(fromAccount, toAccount, amount);
             System.out.println("Transfer successful.");
-        } catch (NumberFormatException e) {
-            System.out.println("Invalid amount. Please enter a valid number.");
+        } catch (OperationCancelledException e) {
+            System.out.println("Operation cancelled.");
         } catch (Exception e) {
             System.out.println("Failed to transfer: " + e.getMessage());
         }
