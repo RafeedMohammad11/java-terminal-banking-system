@@ -1,5 +1,6 @@
 package controller;
 
+import exception.AccountNotFoundException;
 import exception.DuplicateAccountException;
 import model.Account;
 import model.CurrentAccount;
@@ -71,6 +72,14 @@ public class BankController {
         try {
             System.out.print("Enter account number: ");
             String accountNumber = scanner.nextLine().trim();
+            
+            try {
+                bankService.findAccount(accountNumber);
+                System.out.println("Error: Duplicate account exists with account number: " + accountNumber);
+                return;
+            } catch (AccountNotFoundException e) {
+                // Account does not exist, safe to proceed
+            }
             System.out.print("Enter holder name: ");
             String holderName = scanner.nextLine().trim();
             System.out.print("Enter email: ");
@@ -101,6 +110,14 @@ public class BankController {
         try {
             System.out.print("Enter account number: ");
             String accountNumber = scanner.nextLine().trim();
+            
+            try {
+                bankService.findAccount(accountNumber);
+                System.out.println("Error: Duplicate account exists with account number: " + accountNumber);
+                return;
+            } catch (AccountNotFoundException e) {
+                // Account does not exist, safe to proceed
+            }
             System.out.print("Enter holder name: ");
             String holderName = scanner.nextLine().trim();
             System.out.print("Enter email: ");
