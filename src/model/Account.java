@@ -19,16 +19,17 @@ public abstract class Account {
     }
 
     public static void displayHeader() {
-        System.out.println("---------------------------------------------------------------------------------------------------");
+        System.out.println(
+                "---------------------------------------------------------------------------------------------------");
         System.out.printf(
                 "| %-12s | %-20s | %-25s | %-15s | %-10s |%n",
                 "Account No",
                 "Holder Name",
                 "Email",
                 "Phone",
-                "Balance"
-        );
-        System.out.println("---------------------------------------------------------------------------------------------------");
+                "Balance");
+        System.out.println(
+                "---------------------------------------------------------------------------------------------------");
     }
 
     public void displayInfo() {
@@ -38,8 +39,7 @@ public abstract class Account {
                 holderName,
                 email,
                 phone,
-                balance
-        );
+                balance);
     }
 
     public String getAccountNumber() {
@@ -72,6 +72,10 @@ public abstract class Account {
 
     public double getBalance() {
         return balance;
+    }
+
+    public String getAccountType() {
+        return this.getClass().getSimpleName();
     }
 
     public void deposit(double amount) throws exception.InvalidAmountException {

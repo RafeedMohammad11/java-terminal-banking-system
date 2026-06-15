@@ -1,6 +1,2 @@
 AccountType,AccountNumber,HolderName,Email,Phone,Balance,OverDraftLimit
-SavingsAccount,23912,Khalid Ibn Walid,,,50000.00,0.00
-SavingsAccount,12345,John Doe,john@example.com,0123456789,1000.00,0.00
-SavingsAccount,98765,Jane Doe,jane@example.com,0987654321,5000.00,0.00
-SavingsAccount,11001,Lionel Messi,messi@barca.com,09129991,1000000000000.00,0.00
-CurrentAccount,81968,Mr. Neymar,email,120938881,0.00,0.00
+SavingsAccount,1001,Fahad Amin,fahad@gmail.com,01301231234,50000.00,0.00

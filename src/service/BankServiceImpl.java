@@ -1,5 +1,6 @@
 package service;
 
+import db.AccountDAO;
 import exception.AccountNotFoundException;
 import exception.DuplicateAccountException;
 import exception.InSufficientFundsException;
@@ -8,16 +9,11 @@ import model.Account;
 import model.CurrentAccount;
 import model.SavingsAccount;
 
-import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
-import java.util.ArrayList;
+import java.sql.SQLException;
 import java.util.List;
 
 public class BankServiceImpl implements BankService {
-    private final List<Account> accounts = new ArrayList<>();
+    private final AccountDAO accountDAO = new AccountDAO();
 
     @Override
     public void createAccount(Account account) throws DuplicateAccountException {
@@ -30,183 +26,122 @@ public class BankServiceImpl implements BankService {
             throw new IllegalArgumentException("Account number must not be empty");
         }
 
-        if (findAccountByNumber(accountNumber) != null) {
-            throw new DuplicateAccountException(accountNumber);
+        try {
+            if (accountDAO.getAccountByNumber(accountNumber) != null) {
+                throw new DuplicateAccountException(accountNumber);
+            }
+            accountDAO.insertAccount(account);
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed to create account: " + e.getMessage(), e);
         }
-
-        accounts.add(account);
     }
 
     @Override
     public void deleteAccount(String accountNumber) throws AccountNotFoundException {
-        Account account = findAccountByNumber(accountNumber);
-        if (account == null) {
-            throw new AccountNotFoundException(accountNumber);
+        try {
+            if (accountDAO.getAccountByNumber(accountNumber) == null) {
+                throw new AccountNotFoundException(accountNumber);
+            }
+            accountDAO.deleteAccount(accountNumber);
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed to delete account: " + e.getMessage(), e);
         }
-        accounts.remove(account);
     }
 
     @Override
     public void updateAccount(String accountNumber, String newHolderName, String newEmail, String newPhone)
             throws AccountNotFoundException {
-        Account account = findAccountByNumber(accountNumber);
-        if (account == null) {
-            throw new AccountNotFoundException(accountNumber);
+        try {
+            if (accountDAO.getAccountByNumber(accountNumber) == null) {
+                throw new AccountNotFoundException(accountNumber);
+            }
+            accountDAO.updateAccountInfo(accountNumber, newHolderName, newEmail, newPhone);
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed to update account: " + e.getMessage(), e);
         }
-        account.setHolderName(newHolderName);
-        account.setEmail(newEmail);
-        account.setPhone(newPhone);
     }
 
     @Override
     public Account findAccount(String accountNumber) throws AccountNotFoundException {
-        Account account = findAccountByNumber(accountNumber);
-        if (account == null) {
-            throw new AccountNotFoundException(accountNumber);
+        try {
+            Account account = accountDAO.getAccountByNumber(accountNumber);
+            if (account == null) {
+                throw new AccountNotFoundException(accountNumber);
+            }
+            return account;
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed to find account: " + e.getMessage(), e);
         }
-        return account;
     }
 
     @Override
     public List<Account> getAllAccounts() {
-        return new ArrayList<>(accounts);
+        try {
+            return accountDAO.getAllAccounts();
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed to load accounts: " + e.getMessage(), e);
+        }
     }
 
     @Override
     public void deposit(String accountNumber, double amount)
-            throws AccountNotFoundException, InvalidAmountException, InSufficientFundsException {
-        Account account = findAccountByNumber(accountNumber);
-        if (account == null) {
-            throw new AccountNotFoundException(accountNumber);
+            throws AccountNotFoundException, InvalidAmountException {
+        if (amount <= 0) {
+            throw new InvalidAmountException(amount);
         }
-        account.deposit(amount);
+        try {
+            Account account = findAccount(accountNumber);
+            account.deposit(amount);
+            accountDAO.updateBalance(accountNumber, account.getBalance());
+            accountDAO.logTransaction(accountNumber, "DEPOSIT", amount);
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed to deposit: " + e.getMessage(), e);
+        }
     }
 
     @Override
     public void withdraw(String accountNumber, double amount)
             throws AccountNotFoundException, InvalidAmountException, InSufficientFundsException {
-        Account account = findAccountByNumber(accountNumber);
-        if (account == null) {
-            throw new AccountNotFoundException(accountNumber);
+        if (amount <= 0) {
+            throw new InvalidAmountException(amount);
         }
-        account.withdraw(amount);
+        try {
+            Account account = findAccount(accountNumber);
+            account.withdraw(amount);
+            if (account instanceof CurrentAccount currentAccount) {
+                accountDAO.updateBalanceAndOverdraft(accountNumber, currentAccount.getBalance(),
+                        currentAccount.getOverDraftLimit());
+            } else {
+                accountDAO.updateBalance(accountNumber, account.getBalance());
+            }
+            accountDAO.logTransaction(accountNumber, "WITHDRAW", amount);
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed to withdraw: " + e.getMessage(), e);
+        }
     }
 
     @Override
     public void transfer(String fromAccountNumber, String toAccountNumber, double amount)
             throws AccountNotFoundException, InvalidAmountException, InSufficientFundsException {
-        Account fromAccount = findAccountByNumber(fromAccountNumber);
-        if (fromAccount == null) {
-            throw new AccountNotFoundException(fromAccountNumber);
+        if (amount <= 0) {
+            throw new InvalidAmountException(amount);
         }
-        Account toAccount = findAccountByNumber(toAccountNumber);
-        if (toAccount == null) {
-            throw new AccountNotFoundException(toAccountNumber);
-        }
-
-        fromAccount.withdraw(amount);
-        toAccount.deposit(amount);
-    }
-
-    @Override
-    public void saveToFile() throws Exception {
-        Path filePath = Paths.get("data.csv");
-        StringBuilder csvContent = new StringBuilder();
-        csvContent.append("AccountType,AccountNumber,HolderName,Email,Phone,Balance,OverDraftLimit")
-                .append(System.lineSeparator());
-
-        for (Account account : accounts) {
-            String accountType = account.getClass().getSimpleName();
-            String accountNumber = account.getAccountNumber();
-            String holderName = account.getHolderName();
-            String email = account.getEmail() != null ? account.getEmail() : "";
-            String phone = account.getPhone() != null ? account.getPhone() : "";
-            double balance = account.getBalance();
-            double overDraftLimit = 0.0;
-
-            if (account instanceof CurrentAccount) {
-                overDraftLimit = ((CurrentAccount) account).getOverDraftLimit();
-            }
-
-            csvContent.append(String.format(java.util.Locale.US, "%s,%s,%s,%s,%s,%.2f,%.2f",
-                    accountType, accountNumber, holderName, email, phone, balance, overDraftLimit))
-                    .append(System.lineSeparator());
-        }
-
         try {
-            long startTime = System.nanoTime();
-            System.out.println("Saving accounts to " + filePath.toAbsolutePath() + "...");
-            Files.writeString(filePath, csvContent.toString(), java.nio.charset.StandardCharsets.UTF_8,
-                    StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
-            long elapsedMs = (System.nanoTime() - startTime) / 1_000_000;
-            System.out.println("Accounts saved to " + filePath.toAbsolutePath() + " in " + elapsedMs + " ms");
-        } catch (IOException e) {
-            throw new IOException("Unable to write accounts to " + filePath.toAbsolutePath(), e);
-        }
-    }
-
-    @Override
-    public void loadFromFile() throws Exception {
-        Path filePath = Paths.get("data.csv");
-        if (!Files.exists(filePath)) {
-            System.out.println("No saved data file found: " + filePath.toAbsolutePath());
-            return;
-        }
-
-        accounts.clear();
-        try (BufferedReader reader = Files.newBufferedReader(filePath)) {
-            String line;
-            int lineNumber = 0;
-
-            while ((line = reader.readLine()) != null) {
-                lineNumber++;
-                // Skip header
-                if (lineNumber == 1) {
-                    continue;
-                }
-
-                String[] fields = line.split(",", -1);
-                if (fields.length < 6) {
-                    System.out.println("Invalid line format at line " + lineNumber);
-                    continue;
-                }
-
-                String accountType = fields[0];
-                String accountNumber = fields[1];
-                String holderName = fields[2];
-                String email = fields[3];
-                String phone = fields[4];
-                double balance = Double.parseDouble(fields[5]);
-
-                Account account;
-                if ("CurrentAccount".equals(accountType)) {
-                    double overDraftLimit = 0.0;
-                    if (fields.length > 6 && !fields[6].isBlank()) {
-                        overDraftLimit = Double.parseDouble(fields[6]);
-                    }
-                    account = new CurrentAccount(accountNumber, holderName, email, phone, balance, overDraftLimit);
-                } else {
-                    account = new SavingsAccount(accountNumber, holderName, email, phone, balance);
-                }
-
-                accounts.add(account);
+            Account fromAccount = findAccount(fromAccountNumber);
+            Account toAccount = findAccount(toAccountNumber);
+            fromAccount.withdraw(amount);
+            toAccount.deposit(amount);
+            if (fromAccount instanceof CurrentAccount currentAccount) {
+                accountDAO.updateBalanceAndOverdraft(fromAccountNumber, currentAccount.getBalance(),
+                        currentAccount.getOverDraftLimit());
+            } else {
+                accountDAO.updateBalance(fromAccountNumber, fromAccount.getBalance());
             }
-            System.out.println("Accounts loaded from " + filePath.toAbsolutePath());
-        } catch (IOException e) {
-            throw new IOException("Unable to read accounts from " + filePath.toAbsolutePath(), e);
+            accountDAO.updateBalance(toAccountNumber, toAccount.getBalance());
+            accountDAO.logTransaction(fromAccountNumber, "TRANSFER_OUT", amount);
+            accountDAO.logTransaction(toAccountNumber, "TRANSFER_IN", amount);
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed to transfer: " + e.getMessage(), e);
         }
-    }
-
-    private Account findAccountByNumber(String accountNumber) {
-        if (accountNumber == null) {
-            return null;
-        }
-
-        for (Account account : accounts) {
-            if (accountNumber.equals(account.getAccountNumber())) {
-                return account;
-            }
-        }
-        return null;
     }
 }

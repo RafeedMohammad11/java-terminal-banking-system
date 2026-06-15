@@ -34,7 +34,8 @@ public class BankController {
         this.scanner = new Scanner(System.in);
     }
 
-    private String readString(String prompt, boolean required, StringValidator validator) throws OperationCancelledException {
+    private String readString(String prompt, boolean required, StringValidator validator)
+            throws OperationCancelledException {
         while (true) {
             System.out.print(prompt);
             String input = scanner.nextLine().trim();
@@ -78,24 +79,16 @@ public class BankController {
     }
 
     public void start() {
-        try {
-            bankService.loadFromFile();
-        } catch (Exception e) {
-            System.out.println("Warning: unable to load saved accounts at startup: " + e.getMessage());
-        }
-
         while (true) {
             System.out.println("\n=== Banking System Menu ===");
             System.out.println("1. Create Savings Account");
             System.out.println("2. Create Current Account");
             System.out.println("3. List Accounts");
-            System.out.println("4. Save accounts to data.csv");
-            System.out.println("5. Load accounts from data.csv");
-            System.out.println("6. Update Account");
-            System.out.println("7. Deposit");
-            System.out.println("8. Withdraw");
-            System.out.println("9. Transfer");
-            System.out.println("10. Exit");
+            System.out.println("4. Update Account");
+            System.out.println("5. Deposit");
+            System.out.println("6. Withdraw");
+            System.out.println("7. Transfer");
+            System.out.println("8. Exit");
             System.out.print("Select an option: ");
 
             String input = scanner.nextLine().trim();
@@ -111,13 +104,11 @@ public class BankController {
                 case 1 -> createSavingsAccount();
                 case 2 -> createCurrentAccount();
                 case 3 -> listAccounts();
-                case 4 -> saveAccounts();
-                case 5 -> loadAccounts();
-                case 6 -> updateAccount();
-                case 7 -> deposit();
-                case 8 -> withdraw();
-                case 9 -> transfer();
-                case 10 -> {
+                case 4 -> updateAccount();
+                case 5 -> deposit();
+                case 6 -> withdraw();
+                case 7 -> transfer();
+                case 8 -> {
                     System.out.println("Exiting the application.");
                     scanner.close();
                     return;
@@ -141,7 +132,8 @@ public class BankController {
             String email = readString("Enter email: ", true, null);
             String phone = readString("Enter phone: ", true, null);
             double balance = readDouble("Enter initial balance: ", val -> {
-                if (val < 0) throw new IllegalArgumentException("Initial balance cannot be negative");
+                if (val < 0)
+                    throw new IllegalArgumentException("Initial balance cannot be negative");
             });
 
             SavingsAccount account = new SavingsAccount(accountNumber, holderName, email, phone, balance);
@@ -168,10 +160,12 @@ public class BankController {
             String email = readString("Enter email: ", false, null);
             String phone = readString("Enter phone: ", false, null);
             double balance = readDouble("Enter initial balance: ", val -> {
-                if (val < 0) throw new IllegalArgumentException("Initial balance cannot be negative");
+                if (val < 0)
+                    throw new IllegalArgumentException("Initial balance cannot be negative");
             });
             double overdraftLimit = readDouble("Enter overdraft limit: ", val -> {
-                if (val < 0) throw new IllegalArgumentException("Overdraft limit cannot be negative");
+                if (val < 0)
+                    throw new IllegalArgumentException("Overdraft limit cannot be negative");
             });
 
             CurrentAccount account = new CurrentAccount(accountNumber, holderName, email, phone, balance,
@@ -192,32 +186,16 @@ public class BankController {
             return;
         }
 
-        System.out.println("---------------------------------------------------------------------------------------------------");
+        System.out.println(
+                "---------------------------------------------------------------------------------------------------");
         System.out.printf(
                 "| %-12s | %-20s | %-25s | %-15s | %-10s |%n",
                 "Account No", "Holder Name", "Email", "Phone", "Balance");
-        System.out.println("---------------------------------------------------------------------------------------------------");
-
+        System.out.println(
+                "---------------------------------------------------------------------------------------------------");
 
         for (Account account : accounts) {
             account.displayInfo();
-        }
-    }
-
-    private void saveAccounts() {
-        try {
-            bankService.saveToFile();
-        } catch (Exception e) {
-            System.out.println("Failed to save accounts: " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
-
-    private void loadAccounts() {
-        try {
-            bankService.loadFromFile();
-        } catch (Exception e) {
-            System.out.println("Failed to load accounts: " + e.getMessage());
         }
     }
 
@@ -253,7 +231,8 @@ public class BankController {
                 }
             });
             double amount = readDouble("Enter amount to deposit: ", val -> {
-                if (val <= 0) throw new IllegalArgumentException("Amount must be greater than zero");
+                if (val <= 0)
+                    throw new IllegalArgumentException("Amount must be greater than zero");
             });
 
             bankService.deposit(accountNumber, amount);
@@ -285,7 +264,8 @@ public class BankController {
                         available += ((CurrentAccount) account).getOverDraftLimit();
                     }
                     if (available < val) {
-                        throw new IllegalArgumentException("Insufficient funds. Requested: " + val + ", Available: " + available);
+                        throw new IllegalArgumentException(
+                                "Insufficient funds. Requested: " + val + ", Available: " + available);
                     }
                 } catch (Exception e) {
                     throw new IllegalArgumentException(e.getMessage());
@@ -330,7 +310,8 @@ public class BankController {
                         available += ((CurrentAccount) account).getOverDraftLimit();
                     }
                     if (available < val) {
-                        throw new IllegalArgumentException("Insufficient funds. Request: " + val + ", Available: " + available);
+                        throw new IllegalArgumentException(
+                                "Insufficient funds. Request: " + val + ", Available: " + available);
                     }
                 } catch (Exception e) {
                     throw new IllegalArgumentException(e.getMessage());
