@@ -7,7 +7,7 @@ import java.sql.Statement;
 
 public class DatabaseConnection {
 
-    private static final String URL = "jdbc:sqlite:banking.db";
+    private static final String URL = "JDBC:sqlite:banking.db";
     private static Connection instance = null;
 
     // Private constructor — no one can instantiate this class
