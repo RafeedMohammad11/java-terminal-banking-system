@@ -8,7 +8,7 @@ import java.sql.Statement;
 
 public class AccountNumberGenerator {
 
-    private static final String PREFIX = "ACC";
+    private static final String PREFIX = "ACC-";
     private static final int    START  = 10001;
 
     public static String generate() {

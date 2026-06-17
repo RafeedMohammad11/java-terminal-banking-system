@@ -28,6 +28,45 @@ public class UITheme {
     public static final Font FONT_SMALL   = new Font("Segoe UI", Font.PLAIN, 11);
     public static final Font FONT_BUTTON  = new Font("Segoe UI", Font.BOLD, 13);
 
+    public static final Color FIELD_ERROR   = new Color(220, 38, 38);
+    public static final Color FIELD_SUCCESS = new Color(22, 163, 74);
+    public static final Color FIELD_DEFAULT = BORDER_COLOR;
+
+    public static void setFieldError(JTextField field, JLabel errorLabel, String message) {
+        field.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(FIELD_ERROR, 1),
+                BorderFactory.createEmptyBorder(4, 10, 4, 10)
+        ));
+        if (errorLabel != null) {
+            errorLabel.setText(message);
+            errorLabel.setForeground(FIELD_ERROR);
+            errorLabel.setVisible(true);
+        }
+    }
+
+    public static void setFieldSuccess(JTextField field, JLabel errorLabel) {
+        field.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(FIELD_SUCCESS, 1),
+                BorderFactory.createEmptyBorder(4, 10, 4, 10)
+        ));
+        if (errorLabel != null) {
+            errorLabel.setText("✓");
+            errorLabel.setForeground(FIELD_SUCCESS);
+            errorLabel.setVisible(true);
+        }
+    }
+
+    public static void resetField(JTextField field, JLabel errorLabel) {
+        field.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(FIELD_DEFAULT, 1),
+                BorderFactory.createEmptyBorder(4, 10, 4, 10)
+        ));
+        if (errorLabel != null) {
+            errorLabel.setText(" ");
+            errorLabel.setVisible(false);
+        }
+    }
+
     // Reusable styled button
     public static JButton primaryButton(String text) {
         JButton btn = new JButton(text);
