@@ -11,29 +11,32 @@ public class MainFrame extends JFrame {
 
     private final CardLayout cardLayout = new CardLayout();
     private final JPanel contentPanel   = new JPanel(cardLayout);
-    private final BankService bankService;
+    private final BankService bankService = new BankServiceImpl();;
 
     public MainFrame() {
-        // Wire service
-        bankService = new BankServiceImpl();
+        try {
+            for (UIManager.LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
+                if ("Nimbus".equals(info.getName())) {
+                    UIManager.setLookAndFeel(info.getClassName());
+                    break;
+                }
+            }
+        } catch (Exception ignored) {}
 
-        // Window settings
-        setTitle("Banking System");
-        setSize(800, 550);
-        setMinimumSize(new Dimension(700, 450));
+        setTitle("MY BANK — Banking System");
+        setSize(900, 600);
+        setMinimumSize(new Dimension(750, 500));
         setDefaultCloseOperation(EXIT_ON_CLOSE);
-        setLocationRelativeTo(null);  // center on screen
+        setLocationRelativeTo(null);
 
-        // Register all panels with a string key
-        contentPanel.add(new DashboardPanel(this),       "DASHBOARD");
-        contentPanel.add(new CreateAccountPanel(this),   "CREATE");
-        contentPanel.add(new AccountListPanel(this),     "LIST");
-        contentPanel.add(new TransactionPanel(this),     "TRANSACTION");
-//        contentPanel.add(new UpdateAccountPanel(this),   "UPDATE");
+        contentPanel.add(new DashboardPanel(this),     "DASHBOARD");
+        contentPanel.add(new CreateAccountPanel(this), "CREATE");
+        contentPanel.add(new AccountListPanel(this),   "LIST");
+        contentPanel.add(new TransactionPanel(this),   "TRANSACTION");
+//        contentPanel.add(new UpdateAccountPanel(this), "UPDATE");
 
         add(contentPanel, BorderLayout.CENTER);
 
-        // Cleanup DB on window close
         addWindowListener(new java.awt.event.WindowAdapter() {
             @Override
             public void windowClosing(java.awt.event.WindowEvent e) {
@@ -43,7 +46,6 @@ public class MainFrame extends JFrame {
 
         showPanel("DASHBOARD");
     }
-
     // Called by every panel to navigate
     public void showPanel(String name) {
         cardLayout.show(contentPanel, name);

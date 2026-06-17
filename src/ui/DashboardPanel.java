@@ -1,7 +1,6 @@
 package ui;
 
 import db.DatabaseConnection;
-
 import javax.swing.*;
 import java.awt.*;
 
@@ -9,40 +8,68 @@ public class DashboardPanel extends JPanel {
 
     public DashboardPanel(MainFrame frame) {
         setLayout(new BorderLayout());
+        setBackground(UITheme.BG);
 
-        // Title
-        JLabel title = new JLabel("Welcome to My Banking System", SwingConstants.CENTER);
-        title.setFont(new Font("Arial", Font.BOLD, 22));
-        title.setBorder(BorderFactory.createEmptyBorder(30, 0, 20, 0));
-        add(title, BorderLayout.NORTH);
+        // Top bar
+        JPanel topBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 24, 16));
+        topBar.setBackground(UITheme.HEADER_BG);
+        JLabel appName = new JLabel("🏦  MY BANK");
+        appName.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        appName.setForeground(Color.WHITE);
+        topBar.add(appName);
+        add(topBar, BorderLayout.NORTH);
+
+        // Center card
+        JPanel center = new JPanel(new GridBagLayout());
+        center.setBackground(UITheme.BG);
+
+        JPanel card = UITheme.cardPanel();
+        card.setLayout(new BorderLayout(0, 20));
+        card.setPreferredSize(new Dimension(520, 360));
+
+        // Welcome text
+        JPanel welcomeRow = new JPanel(new BorderLayout());
+        welcomeRow.setBackground(UITheme.CARD_BG);
+        JLabel title = UITheme.titleLabel("Welcome Back");
+        JLabel sub   = UITheme.mutedLabel("What would you like to do today?");
+        welcomeRow.add(title, BorderLayout.NORTH);
+        welcomeRow.add(sub,   BorderLayout.SOUTH);
+        card.add(welcomeRow, BorderLayout.NORTH);
 
         // Button grid
-        JPanel buttonPanel = new JPanel(new GridLayout(3, 2, 15, 15));
-        buttonPanel.setBorder(BorderFactory.createEmptyBorder(20, 60, 40, 60));
+        JPanel grid = new JPanel(new GridLayout(2, 3, 12, 12));
+        grid.setBackground(UITheme.CARD_BG);
 
-        JButton createBtn      = new JButton("Open New Account");
-        JButton listBtn        = new JButton("View All Accounts");
-        JButton transactionBtn = new JButton("Deposit / Withdraw");
-        JButton transferBtn    = new JButton("Transfer Funds");
-        JButton updateBtn      = new JButton("Update Account");
-        JButton exitBtn        = new JButton("Exit");
+        JButton openBtn   = UITheme.primaryButton("Open Account");
+        JButton listBtn   = UITheme.primaryButton("View Accounts");
+        JButton depositBtn   = UITheme.primaryButton("Deposit");
+        JButton withdrawBtn  = UITheme.ghostButton("Withdraw");
+        JButton transferBtn  = UITheme.ghostButton("Transfer");
+        JButton updateBtn    = UITheme.ghostButton("Update Info");
 
-        // Style buttons
-        Font btnFont = new Font("Arial", Font.PLAIN, 14);
-        for (JButton btn : new JButton[]{
-                createBtn, listBtn, transactionBtn,
-                transferBtn, updateBtn, exitBtn}) {
-            btn.setFont(btnFont);
-            btn.setFocusPainted(false);
-            buttonPanel.add(btn);
-        }
+        grid.add(openBtn);
+        grid.add(listBtn);
+        grid.add(depositBtn);
+        grid.add(withdrawBtn);
+        grid.add(transferBtn);
+        grid.add(updateBtn);
+        card.add(grid, BorderLayout.CENTER);
 
-        add(buttonPanel, BorderLayout.CENTER);
+        // Exit row
+        JPanel exitRow = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        exitRow.setBackground(UITheme.CARD_BG);
+        JButton exitBtn = UITheme.dangerButton("Exit");
+        exitRow.add(exitBtn);
+        card.add(exitRow, BorderLayout.SOUTH);
 
-        // Navigation actions
-        createBtn.addActionListener(e -> frame.showPanel("CREATE"));
+        center.add(card);
+        add(center, BorderLayout.CENTER);
+
+        // Actions
+        openBtn.addActionListener(e -> frame.showPanel("CREATE"));
         listBtn.addActionListener(e -> frame.showPanel("LIST"));
-        transactionBtn.addActionListener(e -> frame.showPanel("TRANSACTION"));
+        depositBtn.addActionListener(e -> frame.showPanel("TRANSACTION"));
+        withdrawBtn.addActionListener(e -> frame.showPanel("TRANSACTION"));
         transferBtn.addActionListener(e -> frame.showPanel("TRANSACTION"));
         updateBtn.addActionListener(e -> frame.showPanel("UPDATE"));
         exitBtn.addActionListener(e -> {
