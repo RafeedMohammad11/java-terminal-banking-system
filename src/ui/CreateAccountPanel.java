@@ -4,13 +4,15 @@ import exception.DuplicateAccountException;
 import model.Account;
 import model.CurrentAccount;
 import model.SavingsAccount;
+import util.AccountNumberGenerator;
 
 import javax.swing.*;
 import java.awt.*;
 
 public class CreateAccountPanel extends JPanel {
 
-    private final JTextField accNumField  = UITheme.styledField();
+    // No more accNumField — replaced by a display label
+    private final JLabel  accNumDisplay = new JLabel();
     private final JTextField nameField    = UITheme.styledField();
     private final JTextField emailField   = UITheme.styledField();
     private final JTextField phoneField   = UITheme.styledField();
@@ -34,6 +36,15 @@ public class CreateAccountPanel extends JPanel {
         topBar.add(topTitle, BorderLayout.WEST);
         add(topBar, BorderLayout.NORTH);
 
+        // Style the generated number display
+        accNumDisplay.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        accNumDisplay.setForeground(UITheme.PRIMARY);
+
+        typeBox.setFont(UITheme.FONT_BODY);
+        typeBox.setPreferredSize(new Dimension(0, 36));
+        extraLabel.setFont(UITheme.FONT_BODY);
+        extraLabel.setForeground(UITheme.TEXT_DARK);
+
         // Card
         JPanel center = new JPanel(new GridBagLayout());
         center.setBackground(UITheme.BG);
@@ -42,17 +53,12 @@ public class CreateAccountPanel extends JPanel {
         card.setLayout(new GridLayout(8, 2, 12, 14));
         card.setPreferredSize(new Dimension(540, 380));
 
-        typeBox.setFont(UITheme.FONT_BODY);
-        typeBox.setPreferredSize(new Dimension(0, 36));
-        extraLabel.setFont(UITheme.FONT_BODY);
-        extraLabel.setForeground(UITheme.TEXT_DARK);
-
-        card.add(styledLabel("Account Number:")); card.add(accNumField);
-        card.add(styledLabel("Holder Name:"));    card.add(nameField);
-        card.add(styledLabel("Email:"));          card.add(emailField);
-        card.add(styledLabel("Phone:"));          card.add(phoneField);
+        card.add(styledLabel("Account Number:"));  card.add(accNumDisplay);
+        card.add(styledLabel("Holder Name:"));     card.add(nameField);
+        card.add(styledLabel("Email:"));           card.add(emailField);
+        card.add(styledLabel("Phone:"));           card.add(phoneField);
         card.add(styledLabel("Initial Balance:")); card.add(balanceField);
-        card.add(styledLabel("Account Type:"));   card.add(typeBox);
+        card.add(styledLabel("Account Type:"));    card.add(typeBox);
         card.add(extraLabel);                      card.add(extraField);
 
         typeBox.addActionListener(e -> extraLabel.setText(
@@ -75,48 +81,60 @@ public class CreateAccountPanel extends JPanel {
         bottom.add(createBtn);
         add(bottom, BorderLayout.SOUTH);
 
+        // Generate number when panel is shown
+        refreshAccountNumber();
+
         createBtn.addActionListener(e -> handleCreate(frame));
-        clearBtn.addActionListener(e -> clearFields());
+        clearBtn.addActionListener(e -> {
+            clearFields();
+            refreshAccountNumber(); // generate a fresh number on clear too
+        });
         backBtn.addActionListener(e -> frame.showPanel("DASHBOARD"));
     }
 
-    private JLabel styledLabel(String text) {
-        JLabel label = new JLabel(text);
-        label.setFont(UITheme.FONT_BODY);
-        label.setForeground(UITheme.TEXT_DARK);
-        return label;
+    // Call this every time the panel becomes visible
+    public void refreshAccountNumber() {
+        String generated = AccountNumberGenerator.generate();
+        accNumDisplay.setText(generated);
     }
 
     private void handleCreate(MainFrame frame) {
         try {
-            String accNum  = accNumField.getText().trim();
+            String accNum  = accNumDisplay.getText(); // read from label, not input
             String name    = nameField.getText().trim();
             String email   = emailField.getText().trim();
             String phone   = phoneField.getText().trim();
             double balance = Double.parseDouble(balanceField.getText().trim());
             double extra   = Double.parseDouble(extraField.getText().trim());
 
-            if (accNum.isBlank() || name.isBlank()) {
-                showError("Account number and name are required.");
+            if (name.isBlank()) {
+                showError("Holder name is required.");
                 return;
             }
 
             Account account;
             if (typeBox.getSelectedIndex() == 0) {
-                account = new SavingsAccount(accNum, name, balance, extra, email, phone);
+                account = new SavingsAccount(
+                        accNum, name, balance, extra, email, phone);
             } else {
-                account = new CurrentAccount(accNum, name, email, phone, balance, extra);
+                account = new CurrentAccount(
+                        accNum, name, email, phone, balance, extra);
             }
 
             frame.getBankService().createAccount(account);
             JOptionPane.showMessageDialog(this,
-                    "Account created successfully!", "Success",
-                    JOptionPane.INFORMATION_MESSAGE);
+                    "Account created!\nAccount Number: " + accNum,
+                    "Success", JOptionPane.INFORMATION_MESSAGE);
+
             clearFields();
+            refreshAccountNumber(); // ready for next account
             frame.showPanel("LIST");
 
         } catch (DuplicateAccountException ex) {
-            showError("Account already exists: " + ex.getAccountNumber());
+            // Extremely rare since number is auto-generated
+            // Just regenerate and tell the user
+            refreshAccountNumber();
+            showError("Number conflict — a new number has been assigned. Try again.");
         } catch (NumberFormatException ex) {
             showError("Balance and rate/limit must be valid numbers.");
         } catch (Exception ex) {
@@ -125,12 +143,18 @@ public class CreateAccountPanel extends JPanel {
     }
 
     private void clearFields() {
-        accNumField.setText("");
         nameField.setText("");
         emailField.setText("");
         phoneField.setText("");
         balanceField.setText("");
         extraField.setText("");
+    }
+
+    private JLabel styledLabel(String text) {
+        JLabel label = new JLabel(text);
+        label.setFont(UITheme.FONT_BODY);
+        label.setForeground(UITheme.TEXT_DARK);
+        return label;
     }
 
     private void showError(String msg) {

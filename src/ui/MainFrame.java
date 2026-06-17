@@ -49,6 +49,17 @@ public class MainFrame extends JFrame {
     // Called by every panel to navigate
     public void showPanel(String name) {
         cardLayout.show(contentPanel, name);
+
+        // Regenerate account number every time Create panel opens
+        if ("CREATE".equals(name)) {
+            // find the CreateAccountPanel and refresh it
+            for (Component c : contentPanel.getComponents()) {
+                if (c instanceof CreateAccountPanel panel) {
+                    panel.refreshAccountNumber();
+                    break;
+                }
+            }
+        }
     }
 
     // Panels get the service through MainFrame
