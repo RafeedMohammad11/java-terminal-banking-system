@@ -18,6 +18,8 @@ public class CreateAccountPanel extends JPanel {
     private final JTextField        nameField     = UITheme.styledField();
     private final JTextField        emailField    = UITheme.styledField();
     private final JTextField        phoneField    = UITheme.styledField();
+    private final JTextField        nidField      = UITheme.styledField();
+    private final JTextField        addressField  = UITheme.styledField();
     private final JTextField        balanceField  = UITheme.styledField();
     private final JTextField        extraField    = UITheme.styledField();
     private final JComboBox<String> typeBox       =
@@ -66,8 +68,8 @@ public class CreateAccountPanel extends JPanel {
         center.setBackground(UITheme.BG);
 
         JPanel card = UITheme.cardPanel();
-        card.setLayout(new GridLayout(12, 2, 12, 4));
-        card.setPreferredSize(new Dimension(560, 460));
+        card.setLayout(new GridLayout(16, 2, 12, 4));
+        card.setPreferredSize(new Dimension(560, 580));
 
         card.add(styledLabel("Account Number:")); card.add(accNumDisplay);
         card.add(new JLabel(""));                 card.add(new JLabel(" "));
@@ -81,20 +83,34 @@ public class CreateAccountPanel extends JPanel {
         card.add(styledLabel("Phone:"));          card.add(phoneField);
         card.add(new JLabel(""));                 card.add(phoneError);
 
+        card.add(styledLabel("NID:"));            card.add(nidField);
+        card.add(new JLabel(""));                 card.add(new JLabel(" "));
+
+        card.add(styledLabel("Address:"));        card.add(addressField);
+        card.add(new JLabel(""));                 card.add(new JLabel(" "));
+
         card.add(styledLabel("Initial Balance:")); card.add(balanceField);
         card.add(new JLabel(""));                  card.add(balanceError);
 
         card.add(styledLabel("Account Type:"));   card.add(typeBox);
         card.add(extraLabel);                     card.add(extraField);
 
-        typeBox.addActionListener(e -> extraLabel.setText(
-                typeBox.getSelectedIndex() == 0
-                        ? "Interest Rate (%):"
-                        : "Overdraft Limit (BDT):"
-        ));
+        typeBox.addActionListener(e -> {
+            extraLabel.setText(
+                    typeBox.getSelectedIndex() == 0
+                            ? "Interest Rate (%):"
+                            : "Overdraft Limit (BDT):"
+            );
+            // Re-validate balance when account type changes (minimum balance rule)
+            String bal = balanceField.getText().trim();
+            if (!bal.isBlank()) validate(balanceField, balanceError, "balance");
+        });
 
         center.add(card);
-        add(center, BorderLayout.CENTER);
+        JScrollPane scrollPane = new JScrollPane(center);
+        scrollPane.setBorder(null);
+        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+        add(scrollPane, BorderLayout.CENTER);
 
         // ── Buttons ───────────────────────────────────────────
         JPanel bottom = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 12));
@@ -146,7 +162,18 @@ public class CreateAccountPanel extends JPanel {
             case "name"    -> InputValidator.validateAccountName(value);
             case "email"   -> InputValidator.validateEmail(value);
             case "phone"   -> InputValidator.validatePhone(value);
-            case "balance" -> InputValidator.validateAmount(value);
+            case "balance" -> {
+                String amtErr = InputValidator.validateAmount(value);
+                if (amtErr != null) yield amtErr;
+                // Savings accounts require a minimum balance of 500
+                if (typeBox.getSelectedIndex() == 0) {
+                    try {
+                        if (Double.parseDouble(value) < 500)
+                            yield "Savings accounts require a minimum of BDT 500";
+                    } catch (NumberFormatException ignored) {}
+                }
+                yield null;
+            }
             default        -> null;
         };
 
@@ -184,6 +211,15 @@ public class CreateAccountPanel extends JPanel {
         if (balanceErr != null) {
             UITheme.setFieldError(balanceField, balanceError, balanceErr);
             valid = false;
+        } else if (typeBox.getSelectedIndex() == 0) {
+            // Savings: enforce 500 BDT minimum
+            try {
+                if (Double.parseDouble(balanceField.getText().trim()) < 500) {
+                    UITheme.setFieldError(balanceField, balanceError,
+                            "Savings accounts require a minimum of BDT 500");
+                    valid = false;
+                }
+            } catch (NumberFormatException ignored) {}
         }
 
         return valid;
@@ -202,14 +238,16 @@ public class CreateAccountPanel extends JPanel {
             String name    = nameField.getText().trim();
             String email   = emailField.getText().trim();
             String phone   = phoneField.getText().trim();
+            String nid     = nidField.getText().trim();
+            String address = addressField.getText().trim();
             double balance = Double.parseDouble(balanceField.getText().trim());
             double extra   = Double.parseDouble(extraField.getText().trim());
 
             Account account;
             if (typeBox.getSelectedIndex() == 0) {
-                account = new SavingsAccount(accNum, name, balance, extra, email, phone);
+                account = new SavingsAccount(accNum, name, balance, extra, email, phone, nid, address);
             } else {
-                account = new CurrentAccount(accNum, name, email, phone, balance, extra);
+                account = new CurrentAccount(accNum, name, email, phone, balance, extra, nid, address);
             }
 
             frame.getBankService().createAccount(account);
@@ -241,6 +279,8 @@ public class CreateAccountPanel extends JPanel {
         nameField.setText("");
         emailField.setText("");
         phoneField.setText("");
+        nidField.setText("");
+        addressField.setText("");
         balanceField.setText("");
         extraField.setText("");
 

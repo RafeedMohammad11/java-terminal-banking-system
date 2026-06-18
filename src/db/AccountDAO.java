@@ -16,8 +16,8 @@ public class AccountDAO {
         String sql = """
                     INSERT INTO accounts
                     (account_number, account_type, holder_name, email, phone,
-                     balance, overdraft_limit, interest_rate)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                     balance, overdraft_limit, interest_rate, nid, address)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """;
 
         try (Connection conn = DatabaseConnection.getInstance();
@@ -29,6 +29,8 @@ public class AccountDAO {
             stmt.setString(4, account.getEmail());
             stmt.setString(5, account.getPhone());
             stmt.setDouble(6, account.getBalance());
+            stmt.setString(9, account.getNid()); // Hidden field
+            stmt.setString(10, account.getAddress()); // Hidden field
 
             if (account instanceof CurrentAccount ca) {
                 stmt.setDouble(7, ca.getOverDraftLimit());
@@ -115,11 +117,11 @@ public class AccountDAO {
     }
 
     // ── UPDATE INFO ───────────────────────────────────────────
-    public void updateAccountInfo(String accountNumber, String holderName,
-            String email, String phone) throws SQLException {
+    public void updateAccountDetails(String accountNumber, String holderName,
+            String email, String phone, String nid, String address) throws SQLException {
         String sql = """
                     UPDATE accounts
-                    SET holder_name = ?, email = ?, phone = ?
+                    SET holder_name = ?, email = ?, phone = ?, nid = ?, address = ?
                     WHERE account_number = ?
                 """;
 
@@ -128,12 +130,24 @@ public class AccountDAO {
             stmt.setString(1, holderName);
             stmt.setString(2, email);
             stmt.setString(3, phone);
-            stmt.setString(4, accountNumber);
+            stmt.setString(4, nid != null ? nid : "");
+            stmt.setString(5, address != null ? address : "");
+            stmt.setString(6, accountNumber);
             stmt.executeUpdate();
         }
     }
 
     // ── DELETE ────────────────────────────────────────────────
+    public void deleteTransactionsForAccount(String accountNumber) throws SQLException {
+        String sql = "DELETE FROM transactions WHERE account_number = ?";
+
+        try (Connection conn = DatabaseConnection.getInstance();
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, accountNumber);
+            stmt.executeUpdate();
+        }
+    }
+
     public void deleteAccount(String accountNumber) throws SQLException {
         String sql = "DELETE FROM accounts WHERE account_number = ?";
 
@@ -170,14 +184,16 @@ public class AccountDAO {
         String email = rs.getString("email");
         String phone = rs.getString("phone");
         double balance = rs.getDouble("balance");
+        String nid = rs.getString("nid"); // Hidden field
+        String address = rs.getString("address"); // Hidden field
 
         return switch (type) {
             case "CurrentAccount" -> new CurrentAccount(
                     accNum, name, email, phone, balance,
-                    rs.getDouble("overdraft_limit"));
+                    rs.getDouble("overdraft_limit"), nid, address);
             case "SavingsAccount" -> new SavingsAccount(
                     accNum, name, balance,
-                    rs.getDouble("interest_rate"), email, phone);
+                    rs.getDouble("interest_rate"), email, phone, nid, address);
             default -> throw new SQLException("Unknown account type: " + type);
         };
     }

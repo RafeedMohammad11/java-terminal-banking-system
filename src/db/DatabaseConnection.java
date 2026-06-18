@@ -2,12 +2,13 @@ package db;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
 public class DatabaseConnection {
 
-    private static final String URL = "JDBC:sqlite:banking.db";
+    private static final String URL = "jdbc:sqlite:banking.db";
     private static volatile Connection instance = null;
     private static final Object LOCK = new Object();
 
@@ -69,34 +70,63 @@ public class DatabaseConnection {
     }
 
     private static void initializeTables(Connection conn) throws SQLException {
-        String createAccounts = """
+        try (Statement stmt = conn.createStatement()) {
+            stmt.execute("""
                     CREATE TABLE IF NOT EXISTS accounts (
-                        account_number TEXT PRIMARY KEY,
-                        account_type   TEXT NOT NULL,
-                        holder_name    TEXT NOT NULL,
-                        email          TEXT,
-                        phone          TEXT,
-                        balance        REAL NOT NULL DEFAULT 0,
+                        account_number  TEXT PRIMARY KEY,
+                        account_type    TEXT NOT NULL,
+                        holder_name     TEXT NOT NULL,
+                        email           TEXT,
+                        phone           TEXT,
+                        balance         REAL NOT NULL DEFAULT 0,
                         overdraft_limit REAL DEFAULT 0,
-                        interest_rate   REAL DEFAULT 0
+                        interest_rate   REAL DEFAULT 0,
+                        nid             TEXT DEFAULT '',
+                        address         TEXT DEFAULT ''
                     );
-                """;
+                    """);
 
-        String createTransactions = """
+            stmt.execute("""
                     CREATE TABLE IF NOT EXISTS transactions (
-                        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                        id             INTEGER PRIMARY KEY AUTOINCREMENT,
                         account_number TEXT NOT NULL,
-                        type        TEXT NOT NULL,
-                        amount      REAL NOT NULL,
-                        timestamp   TEXT NOT NULL,
+                        type           TEXT NOT NULL,
+                        amount         REAL NOT NULL,
+                        timestamp      TEXT NOT NULL,
                         FOREIGN KEY (account_number) REFERENCES accounts(account_number)
                     );
-                """;
+                    """);
+
+            ensureColumnExists(conn, "accounts", "nid", "TEXT DEFAULT ''");
+            ensureColumnExists(conn, "accounts", "address", "TEXT DEFAULT ''");
+        }
+    }
+
+    /**
+     * Ensures a column exists on older database files created before nid/address were added.
+     */
+    private static void ensureColumnExists(Connection conn, String tableName,
+                                           String columnName, String columnDef) throws SQLException {
+        if (columnExists(conn, tableName, columnName)) {
+            return;
+        }
 
         try (Statement stmt = conn.createStatement()) {
-            stmt.execute(createAccounts);
-            stmt.execute(createTransactions);
+            stmt.execute("ALTER TABLE " + tableName + " ADD COLUMN " + columnName + " " + columnDef);
         }
+    }
+
+    private static boolean columnExists(Connection conn, String tableName, String columnName)
+            throws SQLException {
+        try (Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("PRAGMA table_info(" + tableName + ")")) {
+            while (rs.next()) {
+                if (columnName.equalsIgnoreCase(rs.getString("name"))) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     public static void close() {

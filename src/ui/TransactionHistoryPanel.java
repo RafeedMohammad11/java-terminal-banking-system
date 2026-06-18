@@ -1,17 +1,12 @@
 package ui;
 
 import db.DatabaseConnection;
-import model.Account;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.io.*;
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 
 public class TransactionHistoryPanel extends JPanel {
 
@@ -23,32 +18,30 @@ public class TransactionHistoryPanel extends JPanel {
         setLayout(new BorderLayout());
         setBackground(UITheme.BG);
 
-        // ── Header ────────────────────────────────────────────
         JPanel header = UITheme.headerBar("Transaction History");
-        JButton refreshBtn = new JButton("⟳ Refresh");
-        refreshBtn.setFont(UITheme.FONT_SMALL);
-        refreshBtn.setForeground(Color.WHITE);
-        refreshBtn.setBackground(UITheme.HEADER_BG);
-        refreshBtn.setBorderPainted(false);
-        refreshBtn.setFocusPainted(false);
-        refreshBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        header.add(refreshBtn, BorderLayout.EAST);
-        add(header, BorderLayout.NORTH);
+        JButton refreshBtn = UITheme.headerActionButton("⟳ Refresh");
+        JButton headerBackBtn = UITheme.headerActionButton("← Dashboard");
+        JPanel headerActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        headerActions.setOpaque(false);
+        headerActions.add(headerBackBtn);
+        headerActions.add(refreshBtn);
+        header.add(headerActions, BorderLayout.EAST);
 
-        // ── Filter bar ────────────────────────────────────────
         JPanel filterBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 10));
-        filterBar.setBackground(UITheme.BG);
-        filterBar.setBorder(BorderFactory.createEmptyBorder(0, 20, 0, 20));
+        filterBar.setBackground(UITheme.CARD_BG);
+        filterBar.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 0, 1, 0, UITheme.BORDER_COLOR),
+                BorderFactory.createEmptyBorder(10, 24, 10, 24)));
 
         JLabel filterLabel = new JLabel("Filter by type:");
         filterLabel.setFont(UITheme.FONT_BODY);
         filterLabel.setForeground(UITheme.TEXT_BODY);
 
         filterBox = new JComboBox<>(
-                new String[]{"All", "DEPOSIT", "WITHDRAW", "TRANSFER",
+                new String[]{"All", "DEPOSIT", "WITHDRAW", "TRANSFER_OUT", "TRANSFER_IN",
                         "ACCOUNT_CREATED", "UPDATED"});
-        filterBox.setFont(UITheme.FONT_BODY);
-        filterBox.setPreferredSize(new Dimension(180, 32));
+        UITheme.styleComboBox(filterBox);
+        filterBox.setPreferredSize(new Dimension(200, 36));
 
         totalLabel.setFont(UITheme.FONT_SMALL);
         totalLabel.setForeground(UITheme.TEXT_MUTED);
@@ -57,9 +50,13 @@ public class TransactionHistoryPanel extends JPanel {
         filterBar.add(filterBox);
         filterBar.add(Box.createHorizontalStrut(20));
         filterBar.add(totalLabel);
-        add(filterBar, BorderLayout.AFTER_LAST_LINE);
 
-        // ── Table ─────────────────────────────────────────────
+        JPanel north = new JPanel();
+        north.setLayout(new BoxLayout(north, BoxLayout.Y_AXIS));
+        north.add(header);
+        north.add(filterBar);
+        add(north, BorderLayout.NORTH);
+
         String[] cols = {"#", "Account Number", "Holder Name",
                 "Type", "Amount (BDT)", "Date & Time"};
         tableModel = new DefaultTableModel(cols, 0) {
@@ -69,7 +66,6 @@ public class TransactionHistoryPanel extends JPanel {
         JTable table = new JTable(tableModel);
         UITheme.styleTable(table);
 
-        // Color-code transaction type column
         table.getColumnModel().getColumn(3).setCellRenderer(
                 new javax.swing.table.DefaultTableCellRenderer() {
                     @Override
@@ -81,13 +77,15 @@ public class TransactionHistoryPanel extends JPanel {
                         setBorder(BorderFactory.createEmptyBorder(0, 14, 0, 14));
                         String type = val != null ? val.toString() : "";
                         if (!sel) {
-                            switch (type) {
-                                case "DEPOSIT"         -> setForeground(UITheme.SUCCESS);
-                                case "WITHDRAW"        -> setForeground(UITheme.DANGER);
-                                case "TRANSFER"        -> setForeground(UITheme.WARNING);
-                                case "ACCOUNT_CREATED" -> setForeground(UITheme.PRIMARY);
-                                default                -> setForeground(UITheme.TEXT_MUTED);
-                            }
+                            setForeground(switch (type) {
+                                case "DEPOSIT"         -> UITheme.SUCCESS;
+                                case "WITHDRAW"        -> UITheme.DANGER;
+                                case "TRANSFER_OUT",
+                                     "TRANSFER_IN"     -> UITheme.WARNING;
+                                case "ACCOUNT_CREATED" -> UITheme.PRIMARY;
+                                case "UPDATED"         -> UITheme.ACCENT;
+                                default                -> UITheme.TEXT_MUTED;
+                            });
                             setBackground(row % 2 == 0 ? UITheme.CARD_BG : UITheme.ROW_ALT);
                         }
                         setFont(new Font("Segoe UI", Font.BOLD, 12));
@@ -95,7 +93,6 @@ public class TransactionHistoryPanel extends JPanel {
                     }
                 });
 
-        // Column widths
         table.getColumnModel().getColumn(0).setPreferredWidth(40);
         table.getColumnModel().getColumn(1).setPreferredWidth(130);
         table.getColumnModel().getColumn(2).setPreferredWidth(160);
@@ -113,15 +110,11 @@ public class TransactionHistoryPanel extends JPanel {
         tableWrapper.add(scroll);
         add(tableWrapper, BorderLayout.CENTER);
 
-        // ── Bottom bar ────────────────────────────────────────
-        JPanel bottom = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 10));
-        bottom.setBackground(UITheme.BG);
-        JButton backBtn = UITheme.primaryButton("Dashboard");
-        bottom.add(backBtn);
-        add(bottom, BorderLayout.SOUTH);
+        JButton backBtn = UITheme.ghostButton("← Dashboard");
+        add(UITheme.bottomActionBar(backBtn), BorderLayout.SOUTH);
 
-        // ── Listeners ─────────────────────────────────────────
         backBtn.addActionListener(e -> frame.showPanel("DASHBOARD"));
+        headerBackBtn.addActionListener(e -> frame.showPanel("DASHBOARD"));
         refreshBtn.addActionListener(e -> loadHistory(frame));
         filterBox.addActionListener(e -> loadHistory(frame));
 
@@ -135,7 +128,6 @@ public class TransactionHistoryPanel extends JPanel {
         try {
             Connection conn = DatabaseConnection.getInstance();
 
-            // Build query with optional filter
             String sql;
             if ("All".equals(filter)) {
                 sql = "SELECT t.id, t.account_number, a.holder_name, " +
@@ -169,10 +161,7 @@ public class TransactionHistoryPanel extends JPanel {
                 });
             }
 
-            totalLabel.setText("Total records: " + count);
-            if (count == 0) {
-                totalLabel.setText("No transactions found.");
-            }
+            totalLabel.setText(count == 0 ? "No transactions found." : "Total records: " + count);
 
         } catch (SQLException e) {
             totalLabel.setText("Error loading transactions: " + e.getMessage());

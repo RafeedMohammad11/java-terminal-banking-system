@@ -85,10 +85,11 @@ public class BankController {
             System.out.println("2. Create Current Account");
             System.out.println("3. List Accounts");
             System.out.println("4. Update Account");
-            System.out.println("5. Deposit");
-            System.out.println("6. Withdraw");
-            System.out.println("7. Transfer");
-            System.out.println("8. Exit");
+            System.out.println("5. Delete Account");
+            System.out.println("6. Deposit");
+            System.out.println("7. Withdraw");
+            System.out.println("8. Transfer");
+            System.out.println("9. Exit");
             System.out.print("Select an option: ");
 
             String input = scanner.nextLine().trim();
@@ -105,10 +106,11 @@ public class BankController {
                 case 2 -> createCurrentAccount();
                 case 3 -> listAccounts();
                 case 4 -> updateAccount();
-                case 5 -> deposit();
-                case 6 -> withdraw();
-                case 7 -> transfer();
-                case 8 -> {
+                case 5 -> deleteAccount();
+                case 6 -> deposit();
+                case 7 -> withdraw();
+                case 8 -> transfer();
+                case 9 -> {
                     System.out.println("Exiting the application.");
                     scanner.close();
                     return;
@@ -131,12 +133,14 @@ public class BankController {
             String holderName = readString("Enter holder name: ", true, null);
             String email = readString("Enter email: ", true, null);
             String phone = readString("Enter phone: ", true, null);
+            String nid = readString("Enter NID: ", false, null);
+            String address = readString("Enter address: ", false, null);
             double balance = readDouble("Enter initial balance: ", val -> {
                 if (val < 0)
                     throw new IllegalArgumentException("Initial balance cannot be negative");
             });
 
-            SavingsAccount account = new SavingsAccount(accountNumber, holderName, email, phone, balance);
+            SavingsAccount account = new SavingsAccount(accountNumber, holderName, email, phone, balance, nid, address);
             bankService.createAccount(account);
             System.out.println("Savings account created successfully.");
         } catch (OperationCancelledException e) {
@@ -159,6 +163,8 @@ public class BankController {
             String holderName = readString("Enter holder name: ", true, null);
             String email = readString("Enter email: ", false, null);
             String phone = readString("Enter phone: ", false, null);
+            String nid = readString("Enter NID: ", false, null);
+            String address = readString("Enter address: ", false, null);
             double balance = readDouble("Enter initial balance: ", val -> {
                 if (val < 0)
                     throw new IllegalArgumentException("Initial balance cannot be negative");
@@ -169,7 +175,7 @@ public class BankController {
             });
 
             CurrentAccount account = new CurrentAccount(accountNumber, holderName, email, phone, balance,
-                    overdraftLimit);
+                    overdraftLimit, nid, address);
             bankService.createAccount(account);
             System.out.println("Current account created successfully.");
         } catch (OperationCancelledException e) {
@@ -217,13 +223,49 @@ public class BankController {
             String holderName = readString("Enter new holder name: ", true, null);
             String email = readString("Enter new email: ", false, null);
             String phone = readString("Enter new phone: ", false, null);
+            String nid = readString("Enter new NID: ", false, null);
+            String address = readString("Enter new address: ", false, null);
 
-            bankService.updateAccount(accountNumber, holderName, email, phone);
+            bankService.updateAccount(accountNumber, holderName, email, phone, nid, address);
             System.out.println("Account updated successfully.");
         } catch (OperationCancelledException e) {
             System.out.println("Operation cancelled.");
         } catch (Exception e) {
             System.out.println("Failed to update account: " + e.getMessage());
+        }
+    }
+
+    private void deleteAccount() {
+        try {
+            String accountNumber = readString("Enter account number to delete: ", true, val -> {
+                try {
+                    bankService.findAccount(val);
+                } catch (Exception e) {
+                    throw new IllegalArgumentException(e.getMessage());
+                }
+            });
+
+            Account account = bankService.findAccount(accountNumber);
+            if (account.getBalance() != 0) {
+                System.out.println("Cannot delete account with non-zero balance (BDT "
+                        + String.format("%.2f", account.getBalance()) + ").");
+                return;
+            }
+
+            String confirm = readString(
+                    "Type 'yes' to permanently delete account " + accountNumber + ": ",
+                    true, null);
+            if (!confirm.equalsIgnoreCase("yes")) {
+                System.out.println("Delete cancelled.");
+                return;
+            }
+
+            bankService.deleteAccount(accountNumber);
+            System.out.println("Account deleted successfully.");
+        } catch (OperationCancelledException e) {
+            System.out.println("Operation cancelled.");
+        } catch (Exception e) {
+            System.out.println("Failed to delete account: " + e.getMessage());
         }
     }
 

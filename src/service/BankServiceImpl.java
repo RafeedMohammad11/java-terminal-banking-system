@@ -48,11 +48,26 @@ public class BankServiceImpl implements BankService {
     @Override
     public void deleteAccount(String accountNumber) throws AccountNotFoundException {
         try {
-            if (accountDAO.getAccountByNumber(accountNumber) == null) {
-                throw new AccountNotFoundException(accountNumber);
+            Account account = findAccount(accountNumber);
+            if (account.getBalance() != 0) {
+                throw new IllegalStateException(
+                        "Cannot close account with non-zero balance (BDT "
+                                + String.format("%.2f", account.getBalance()) + "). "
+                                + "Withdraw or transfer funds first.");
             }
-            accountDAO.deleteAccount(accountNumber);
+
+            DatabaseConnection.beginTransaction();
+            try {
+                accountDAO.deleteTransactionsForAccount(accountNumber);
+                accountDAO.deleteAccount(accountNumber);
+                DatabaseConnection.commit();
+            } catch (Exception e) {
+                DatabaseConnection.rollback();
+                throw e;
+            }
         } catch (AccountNotFoundException e) {
+            throw e;
+        } catch (IllegalStateException e) {
             throw e;
         } catch (SQLException e) {
             throw new DatabaseException("Failed to delete account: " + e.getMessage(), e);
@@ -60,13 +75,23 @@ public class BankServiceImpl implements BankService {
     }
 
     @Override
-    public void updateAccount(String accountNumber, String newHolderName, String newEmail, String newPhone)
+    public void updateAccount(String accountNumber, String newHolderName, String newEmail, String newPhone, String newNid, String newAddress)
             throws AccountNotFoundException {
         try {
             if (accountDAO.getAccountByNumber(accountNumber) == null) {
                 throw new AccountNotFoundException(accountNumber);
             }
-            accountDAO.updateAccountInfo(accountNumber, newHolderName, newEmail, newPhone);
+
+            DatabaseConnection.beginTransaction();
+            try {
+                accountDAO.updateAccountDetails(
+                        accountNumber, newHolderName, newEmail, newPhone, newNid, newAddress);
+                accountDAO.logTransaction(accountNumber, "UPDATED", 0);
+                DatabaseConnection.commit();
+            } catch (Exception e) {
+                DatabaseConnection.rollback();
+                throw e;
+            }
         } catch (AccountNotFoundException e) {
             throw e;
         } catch (SQLException e) {

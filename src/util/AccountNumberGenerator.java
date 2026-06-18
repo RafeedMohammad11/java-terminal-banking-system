@@ -29,7 +29,7 @@ public class AccountNumberGenerator {
             }
 
             // Get the highest existing number
-            String maxSql  = "SELECT MAX(CAST(SUBSTR(account_number, 4) AS INTEGER)) " +
+            String maxSql  = "SELECT MAX(CAST(SUBSTR(account_number, 5) AS INTEGER)) " +
                     "AS max_num FROM accounts";
             ResultSet rs2  = conn.createStatement().executeQuery(maxSql);
 

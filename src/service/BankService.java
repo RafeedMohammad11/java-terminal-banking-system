@@ -12,7 +12,7 @@ public interface BankService {
 
         void deleteAccount(String accountNumber) throws AccountNotFoundException;
 
-        void updateAccount(String accountNumber, String newHolderName, String newEmail, String newPhone)
+        void updateAccount(String accountNumber, String newHolderName, String newEmail, String newPhone, String newNid, String newAddress)
                         throws AccountNotFoundException;
 
         Account findAccount(String accountNumber) throws AccountNotFoundException;

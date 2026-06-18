@@ -7,7 +7,18 @@ public abstract class Account {
     private String phone;
     private double balance;
 
+    // Hidden fields (not displayed in list views, but available in detail views)
+    private String nid; // National ID
+    private String address; // Physical address
+
+    // Constructor without hidden fields (backward compatible)
     public Account(String accountNumber, String holderName, String email, String phone, double balance) {
+        this(accountNumber, holderName, email, phone, balance, "", "");
+    }
+
+    // Constructor with hidden fields (used when creating new accounts)
+    public Account(String accountNumber, String holderName, String email, String phone,
+            double balance, String nid, String address) {
         if (balance < 0) {
             throw new IllegalArgumentException("Initial balance cannot be negative");
         }
@@ -16,6 +27,8 @@ public abstract class Account {
         this.email = email;
         this.phone = phone;
         this.balance = balance;
+        this.nid = nid != null ? nid : "";
+        this.address = address != null ? address : "";
     }
 
     public String getAccountNumber() {
@@ -48,6 +61,34 @@ public abstract class Account {
 
     public double getBalance() {
         return balance;
+    }
+
+    /**
+     * Hidden field accessor - National ID
+     */
+    public String getNid() {
+        return nid;
+    }
+
+    /**
+     * Hidden field setter - National ID
+     */
+    public void setNid(String nid) {
+        this.nid = nid != null ? nid : "";
+    }
+
+    /**
+     * Hidden field accessor - Physical Address
+     */
+    public String getAddress() {
+        return address;
+    }
+
+    /**
+     * Hidden field setter - Physical Address
+     */
+    public void setAddress(String address) {
+        this.address = address != null ? address : "";
     }
 
     public String getAccountType() {

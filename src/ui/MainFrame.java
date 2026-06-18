@@ -16,8 +16,11 @@ public class MainFrame extends JFrame {
 
     // Panels that need refreshing on navigation
     private final CreateAccountPanel createPanel = new CreateAccountPanel(this);
+    private final AccountListPanel   listPanel   = new AccountListPanel(this);
     private final TransactionPanel transactionPanel = new TransactionPanel(this);
     private final TransactionHistoryPanel historyPanel = new TransactionHistoryPanel(this);
+    private final UpdateAccountPanel updatePanel = new UpdateAccountPanel(this);
+    private final DeleteAccountPanel deletePanel = new DeleteAccountPanel(this);
 
     public MainFrame() {
         try {
@@ -31,17 +34,18 @@ public class MainFrame extends JFrame {
         }
 
         setTitle("MY BANK — Banking System");
-        setSize(950, 620);
-        setMinimumSize(new Dimension(800, 550));
+        setSize(950, 750);
+        setMinimumSize(new Dimension(800, 650));
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
         // All panels initialized before being added
         contentPanel.add(new DashboardPanel(this), "DASHBOARD");
         contentPanel.add(createPanel, "CREATE");
-        contentPanel.add(new AccountListPanel(this), "LIST");
+        contentPanel.add(listPanel, "LIST");
         contentPanel.add(transactionPanel, "TRANSACTION");
-        // contentPanel.add(new UpdateAccountPanel(this), "UPDATE");
+        contentPanel.add(updatePanel, "UPDATE");
+        contentPanel.add(deletePanel, "DELETE");
         contentPanel.add(historyPanel, "HISTORY");
 
         add(contentPanel, BorderLayout.CENTER);
@@ -61,10 +65,23 @@ public class MainFrame extends JFrame {
 
         // Refresh each panel when navigated to
         switch (name) {
-            case "CREATE" -> createPanel.refreshAccountNumber();
+            case "CREATE"      -> createPanel.refreshAccountNumber();
+            case "LIST"        -> listPanel.loadAccounts(this);
             case "TRANSACTION" -> transactionPanel.loadAccountNumbers(this);
-            case "HISTORY" -> historyPanel.loadHistory(this);
+            case "HISTORY"     -> historyPanel.loadHistory(this);
+            case "UPDATE"      -> updatePanel.prepare(this, null);
+            case "DELETE"      -> deletePanel.prepare(this, null);
         }
+    }
+
+    public void showUpdatePanel(model.Account account) {
+        updatePanel.prepare(this, account);
+        cardLayout.show(contentPanel, "UPDATE");
+    }
+
+    public void showDeletePanel(model.Account account) {
+        deletePanel.prepare(this, account);
+        cardLayout.show(contentPanel, "DELETE");
     }
 
     public BankService getBankService() {

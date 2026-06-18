@@ -103,6 +103,35 @@ public class UITheme {
         btn.setOpaque(true);
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         btn.setPreferredSize(new Dimension(160, 38));
+        btn.addMouseListener(new MouseAdapter() {
+            public void mouseEntered(MouseEvent e) {
+                btn.setBackground(PRIMARY_LIGHT);
+            }
+            public void mouseExited(MouseEvent e) {
+                btn.setBackground(CARD_BG);
+            }
+        });
+        return btn;
+    }
+
+    public static JButton headerActionButton(String text) {
+        JButton btn = new JButton(text);
+        btn.setFont(FONT_SMALL);
+        btn.setForeground(Color.WHITE);
+        btn.setBackground(HEADER_BG);
+        btn.setBorder(BorderFactory.createEmptyBorder(6, 12, 6, 12));
+        btn.setBorderPainted(false);
+        btn.setFocusPainted(false);
+        btn.setOpaque(true);
+        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btn.addMouseListener(new MouseAdapter() {
+            public void mouseEntered(MouseEvent e) {
+                btn.setBackground(SIDEBAR_BG);
+            }
+            public void mouseExited(MouseEvent e) {
+                btn.setBackground(HEADER_BG);
+            }
+        });
         return btn;
     }
 
@@ -173,12 +202,68 @@ public class UITheme {
         JTextField field = new JTextField();
         field.setFont(FONT_BODY);
         field.setForeground(TEXT_DARK);
-        field.setPreferredSize(new Dimension(0, 36));
+        field.setPreferredSize(new Dimension(320, 36));
         field.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(BORDER_COLOR, 1),
                 BorderFactory.createEmptyBorder(4, 10, 4, 10)
         ));
         return field;
+    }
+
+    public static void styleComboBox(JComboBox<?> box) {
+        box.setFont(FONT_BODY);
+        box.setPreferredSize(new Dimension(320, 36));
+        box.setBackground(Color.WHITE);
+        box.setBorder(BorderFactory.createLineBorder(BORDER_COLOR, 1));
+    }
+
+    public static JLabel formLabel(String text) {
+        JLabel lbl = new JLabel(text);
+        lbl.setFont(FONT_BODY);
+        lbl.setForeground(TEXT_DARK);
+        lbl.setHorizontalAlignment(SwingConstants.RIGHT);
+        return lbl;
+    }
+
+    public static JLabel infoLabel() {
+        JLabel lbl = new JLabel(" ");
+        lbl.setFont(new Font("Segoe UI", Font.ITALIC, 12));
+        lbl.setForeground(TEXT_MUTED);
+        return lbl;
+    }
+
+    public static JLabel hintLabel(String text) {
+        JLabel lbl = new JLabel(text);
+        lbl.setFont(FONT_SMALL);
+        lbl.setForeground(TEXT_MUTED);
+        return lbl;
+    }
+
+    public static JPanel sectionHeader(String title) {
+        JPanel section = new JPanel(new BorderLayout());
+        section.setBackground(PRIMARY_LIGHT);
+        section.setBorder(BorderFactory.createEmptyBorder(8, 12, 8, 12));
+        JLabel label = new JLabel(title);
+        label.setFont(FONT_HEADING);
+        label.setForeground(PRIMARY_DARK);
+        section.add(label, BorderLayout.WEST);
+        return section;
+    }
+
+    public static JPanel bottomActionBar(Component... rightComponents) {
+        JPanel bottom = new JPanel(new BorderLayout());
+        bottom.setBackground(CARD_BG);
+        bottom.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(1, 0, 0, 0, BORDER_COLOR),
+                BorderFactory.createEmptyBorder(12, 24, 12, 24)));
+
+        JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 0));
+        right.setOpaque(false);
+        for (Component c : rightComponents) {
+            right.add(c);
+        }
+        bottom.add(right, BorderLayout.EAST);
+        return bottom;
     }
 
     // ── Panel Factories ───────────────────────────────────────
