@@ -33,7 +33,7 @@ public class MainFrame extends JFrame {
         } catch (Exception ignored) {
         }
 
-        setTitle("MY BANK — Banking System");
+        setTitle("AMAR BANK — Banking System");
         setSize(950, 750);
         setMinimumSize(new Dimension(800, 650));
         setDefaultCloseOperation(EXIT_ON_CLOSE);
