@@ -118,7 +118,7 @@ public class TransactionPanel extends JPanel {
     }
 
     // Populate both dropdowns with account numbers from DB
-    private void loadAccountNumbers(MainFrame frame) {
+    public void loadAccountNumbers(MainFrame frame) {
         List<Account> accounts = frame.getBankService().getAllAccounts();
 
         accNumBox.removeAllItems();

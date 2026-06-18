@@ -195,7 +195,13 @@ public class BankController {
                 "---------------------------------------------------------------------------------------------------");
 
         for (Account account : accounts) {
-            account.displayInfo();
+            System.out.printf(
+                    "| %-12s | %-20s | %-25s | %-15s | %10.2f |%n",
+                    account.getAccountNumber(),
+                    account.getHolderName(),
+                    account.getEmail(),
+                    account.getPhone(),
+                    account.getBalance());
         }
     }
 

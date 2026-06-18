@@ -25,7 +25,7 @@ public class SavingsAccount extends Account {
 
         if (getBalance() - amount >= 500) {
             double newBalance = getBalance() - amount;
-            updateBalance(newBalance);
+            setBalance(newBalance);
             System.out.println("Successfully withdrew: BDT " + amount);
             System.out.println("New Balance: " + getBalance());
         } else {

@@ -16,6 +16,16 @@ public class CurrentAccount extends Account {
         return overDraftLimit;
     }
 
+    /**
+     * Sets the overdraft limit with validation.
+     */
+    protected void setOverDraftLimit(double newLimit) {
+        if (newLimit < 0) {
+            throw new IllegalArgumentException("Overdraft limit cannot be negative");
+        }
+        this.overDraftLimit = newLimit;
+    }
+
     @Override
     public void withdraw(double amount) throws exception.InSufficientFundsException, exception.InvalidAmountException {
         if (amount <= 0) {
@@ -26,11 +36,11 @@ public class CurrentAccount extends Account {
 
         if (availableFunds >= amount) {
             if (getBalance() >= amount) {
-                updateBalance(getBalance() - amount);
+                setBalance(getBalance() - amount);
             } else {
                 double remaining = amount - getBalance();
-                updateBalance(0);
-                this.overDraftLimit -= remaining;
+                setBalance(0);
+                setOverDraftLimit(getOverDraftLimit() - remaining);
             }
             System.out.println("Successfully withdrew: BDT " + amount);
             System.out.println("New Balance: " + getBalance() + ", Remaining Overdraft: " + getOverDraftLimit());

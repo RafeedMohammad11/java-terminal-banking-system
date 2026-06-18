@@ -1,19 +1,26 @@
 package service;
 
 import db.AccountDAO;
+import db.DatabaseConnection;
 import exception.AccountNotFoundException;
+import exception.DatabaseException;
 import exception.DuplicateAccountException;
 import exception.InSufficientFundsException;
 import exception.InvalidAmountException;
 import model.Account;
-import model.CurrentAccount;
-import model.SavingsAccount;
 
 import java.sql.SQLException;
 import java.util.List;
 
 public class BankServiceImpl implements BankService {
-    private final AccountDAO accountDAO = new AccountDAO();
+    private final AccountDAO accountDAO;
+
+    public BankServiceImpl(AccountDAO accountDAO) {
+        if (accountDAO == null) {
+            throw new IllegalArgumentException("AccountDAO cannot be null");
+        }
+        this.accountDAO = accountDAO;
+    }
 
     @Override
     public void createAccount(Account account) throws DuplicateAccountException {
@@ -31,8 +38,10 @@ public class BankServiceImpl implements BankService {
                 throw new DuplicateAccountException(accountNumber);
             }
             accountDAO.insertAccount(account);
+        } catch (DuplicateAccountException e) {
+            throw e;
         } catch (SQLException e) {
-            throw new RuntimeException("Failed to create account: " + e.getMessage(), e);
+            throw new DatabaseException("Failed to create account: " + e.getMessage(), e);
         }
     }
 
@@ -43,8 +52,10 @@ public class BankServiceImpl implements BankService {
                 throw new AccountNotFoundException(accountNumber);
             }
             accountDAO.deleteAccount(accountNumber);
+        } catch (AccountNotFoundException e) {
+            throw e;
         } catch (SQLException e) {
-            throw new RuntimeException("Failed to delete account: " + e.getMessage(), e);
+            throw new DatabaseException("Failed to delete account: " + e.getMessage(), e);
         }
     }
 
@@ -56,8 +67,10 @@ public class BankServiceImpl implements BankService {
                 throw new AccountNotFoundException(accountNumber);
             }
             accountDAO.updateAccountInfo(accountNumber, newHolderName, newEmail, newPhone);
+        } catch (AccountNotFoundException e) {
+            throw e;
         } catch (SQLException e) {
-            throw new RuntimeException("Failed to update account: " + e.getMessage(), e);
+            throw new DatabaseException("Failed to update account: " + e.getMessage(), e);
         }
     }
 
@@ -69,8 +82,10 @@ public class BankServiceImpl implements BankService {
                 throw new AccountNotFoundException(accountNumber);
             }
             return account;
+        } catch (AccountNotFoundException e) {
+            throw e;
         } catch (SQLException e) {
-            throw new RuntimeException("Failed to find account: " + e.getMessage(), e);
+            throw new DatabaseException("Failed to find account: " + e.getMessage(), e);
         }
     }
 
@@ -79,7 +94,7 @@ public class BankServiceImpl implements BankService {
         try {
             return accountDAO.getAllAccounts();
         } catch (SQLException e) {
-            throw new RuntimeException("Failed to load accounts: " + e.getMessage(), e);
+            throw new DatabaseException("Failed to load accounts: " + e.getMessage(), e);
         }
     }
 
@@ -90,12 +105,19 @@ public class BankServiceImpl implements BankService {
             throw new InvalidAmountException(amount);
         }
         try {
-            Account account = findAccount(accountNumber);
-            account.deposit(amount);
-            accountDAO.updateBalance(accountNumber, account.getBalance());
-            accountDAO.logTransaction(accountNumber, "DEPOSIT", amount);
+            DatabaseConnection.beginTransaction();
+            try {
+                Account account = findAccount(accountNumber);
+                account.deposit(amount);
+                accountDAO.updateAccountState(account);
+                accountDAO.logTransaction(accountNumber, "DEPOSIT", amount);
+                DatabaseConnection.commit();
+            } catch (Exception e) {
+                DatabaseConnection.rollback();
+                throw e;
+            }
         } catch (SQLException e) {
-            throw new RuntimeException("Failed to deposit: " + e.getMessage(), e);
+            throw new DatabaseException("Failed to deposit: " + e.getMessage(), e);
         }
     }
 
@@ -106,17 +128,19 @@ public class BankServiceImpl implements BankService {
             throw new InvalidAmountException(amount);
         }
         try {
-            Account account = findAccount(accountNumber);
-            account.withdraw(amount);
-            if (account instanceof CurrentAccount currentAccount) {
-                accountDAO.updateBalanceAndOverdraft(accountNumber, currentAccount.getBalance(),
-                        currentAccount.getOverDraftLimit());
-            } else {
-                accountDAO.updateBalance(accountNumber, account.getBalance());
+            DatabaseConnection.beginTransaction();
+            try {
+                Account account = findAccount(accountNumber);
+                account.withdraw(amount);
+                accountDAO.updateAccountState(account);
+                accountDAO.logTransaction(accountNumber, "WITHDRAW", amount);
+                DatabaseConnection.commit();
+            } catch (Exception e) {
+                DatabaseConnection.rollback();
+                throw e;
             }
-            accountDAO.logTransaction(accountNumber, "WITHDRAW", amount);
         } catch (SQLException e) {
-            throw new RuntimeException("Failed to withdraw: " + e.getMessage(), e);
+            throw new DatabaseException("Failed to withdraw: " + e.getMessage(), e);
         }
     }
 
@@ -127,21 +151,23 @@ public class BankServiceImpl implements BankService {
             throw new InvalidAmountException(amount);
         }
         try {
-            Account fromAccount = findAccount(fromAccountNumber);
-            Account toAccount = findAccount(toAccountNumber);
-            fromAccount.withdraw(amount);
-            toAccount.deposit(amount);
-            if (fromAccount instanceof CurrentAccount currentAccount) {
-                accountDAO.updateBalanceAndOverdraft(fromAccountNumber, currentAccount.getBalance(),
-                        currentAccount.getOverDraftLimit());
-            } else {
-                accountDAO.updateBalance(fromAccountNumber, fromAccount.getBalance());
+            DatabaseConnection.beginTransaction();
+            try {
+                Account fromAccount = findAccount(fromAccountNumber);
+                Account toAccount = findAccount(toAccountNumber);
+                fromAccount.withdraw(amount);
+                toAccount.deposit(amount);
+                accountDAO.updateAccountState(fromAccount);
+                accountDAO.updateAccountState(toAccount);
+                accountDAO.logTransaction(fromAccountNumber, "TRANSFER_OUT", amount);
+                accountDAO.logTransaction(toAccountNumber, "TRANSFER_IN", amount);
+                DatabaseConnection.commit();
+            } catch (Exception e) {
+                DatabaseConnection.rollback();
+                throw e;
             }
-            accountDAO.updateBalance(toAccountNumber, toAccount.getBalance());
-            accountDAO.logTransaction(fromAccountNumber, "TRANSFER_OUT", amount);
-            accountDAO.logTransaction(toAccountNumber, "TRANSFER_IN", amount);
         } catch (SQLException e) {
-            throw new RuntimeException("Failed to transfer: " + e.getMessage(), e);
+            throw new DatabaseException("Failed to transfer: " + e.getMessage(), e);
         }
     }
 }

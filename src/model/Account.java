@@ -18,30 +18,6 @@ public abstract class Account {
         this.balance = balance;
     }
 
-    public static void displayHeader() {
-        System.out.println(
-                "---------------------------------------------------------------------------------------------------");
-        System.out.printf(
-                "| %-12s | %-20s | %-25s | %-15s | %-10s |%n",
-                "Account No",
-                "Holder Name",
-                "Email",
-                "Phone",
-                "Balance");
-        System.out.println(
-                "---------------------------------------------------------------------------------------------------");
-    }
-
-    public void displayInfo() {
-        System.out.printf(
-                "| %-12s | %-20s | %-25s | %-15s | %10.2f |%n",
-                accountNumber,
-                holderName,
-                email,
-                phone,
-                balance);
-    }
-
     public String getAccountNumber() {
         return accountNumber;
     }
@@ -82,14 +58,21 @@ public abstract class Account {
         if (amount <= 0) {
             throw new exception.InvalidAmountException(amount);
         }
-        this.balance += amount;
+        setBalance(this.balance + amount);
         System.out.println("Deposited: BDT. " + amount);
     }
 
     public abstract void withdraw(double amount)
             throws exception.InSufficientFundsException, exception.InvalidAmountException;
 
-    protected void updateBalance(double newBalance) {
+    /**
+     * Sets the account balance with validation.
+     * Protected to allow subclasses to update balance during operations.
+     */
+    protected void setBalance(double newBalance) {
+        if (newBalance < 0) {
+            throw new IllegalArgumentException("Balance cannot be negative");
+        }
         this.balance = newBalance;
     }
 }

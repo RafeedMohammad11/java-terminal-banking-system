@@ -78,6 +78,18 @@ public class AccountDAO {
     }
 
     // ── UPDATE BALANCE ────────────────────────────────────────
+    /**
+     * Unified method to update account state (balance and overdraft if applicable).
+     * Handles both regular accounts and current accounts.
+     */
+    public void updateAccountState(Account account) throws SQLException {
+        if (account instanceof CurrentAccount ca) {
+            updateBalanceAndOverdraft(account.getAccountNumber(), account.getBalance(), ca.getOverDraftLimit());
+        } else {
+            updateBalance(account.getAccountNumber(), account.getBalance());
+        }
+    }
+
     public void updateBalance(String accountNumber, double newBalance) throws SQLException {
         String sql = "UPDATE accounts SET balance = ? WHERE account_number = ?";
 

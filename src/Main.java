@@ -6,12 +6,12 @@ import javax.swing.*;
 public class Main {
     public static void main(String[] args) {
 
-        // Init DB before UI launches
+        // Initialize database once at startup
         try {
-            DatabaseConnection.getInstance();
+            DatabaseConnection.initialize();
         } catch (Exception e) {
             JOptionPane.showMessageDialog(null,
-                    "Database connection failed:\n" + e.getMessage(),
+                    "Database initialization failed:\n" + e.getMessage(),
                     "Startup Error", JOptionPane.ERROR_MESSAGE);
             return;
         }

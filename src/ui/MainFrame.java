@@ -1,6 +1,7 @@
 package ui;
 
 import db.DatabaseConnection;
+import db.AccountDAO;
 import service.BankService;
 import service.BankServiceImpl;
 
@@ -10,8 +11,13 @@ import java.awt.*;
 public class MainFrame extends JFrame {
 
     private final CardLayout cardLayout = new CardLayout();
-    private final JPanel contentPanel   = new JPanel(cardLayout);
-    private final BankService bankService = new BankServiceImpl();;
+    private final JPanel contentPanel = new JPanel(cardLayout);
+    private final BankService bankService = new BankServiceImpl(new AccountDAO());
+
+    // Panels that need refreshing on navigation
+    private final CreateAccountPanel createPanel = new CreateAccountPanel(this);
+    private final TransactionPanel transactionPanel = new TransactionPanel(this);
+    private final TransactionHistoryPanel historyPanel = new TransactionHistoryPanel(this);
 
     public MainFrame() {
         try {
@@ -21,19 +27,22 @@ public class MainFrame extends JFrame {
                     break;
                 }
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
 
         setTitle("MY BANK — Banking System");
-        setSize(900, 600);
-        setMinimumSize(new Dimension(750, 500));
+        setSize(950, 620);
+        setMinimumSize(new Dimension(800, 550));
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
-        contentPanel.add(new DashboardPanel(this),     "DASHBOARD");
-        contentPanel.add(new CreateAccountPanel(this), "CREATE");
-        contentPanel.add(new AccountListPanel(this),   "LIST");
-        contentPanel.add(new TransactionPanel(this),   "TRANSACTION");
-//        contentPanel.add(new UpdateAccountPanel(this), "UPDATE");
+        // All panels initialized before being added
+        contentPanel.add(new DashboardPanel(this), "DASHBOARD");
+        contentPanel.add(createPanel, "CREATE");
+        contentPanel.add(new AccountListPanel(this), "LIST");
+        contentPanel.add(transactionPanel, "TRANSACTION");
+        // contentPanel.add(new UpdateAccountPanel(this), "UPDATE");
+        contentPanel.add(historyPanel, "HISTORY");
 
         add(contentPanel, BorderLayout.CENTER);
 
@@ -46,23 +55,18 @@ public class MainFrame extends JFrame {
 
         showPanel("DASHBOARD");
     }
-    // Called by every panel to navigate
+
     public void showPanel(String name) {
         cardLayout.show(contentPanel, name);
 
-        // Regenerate account number every time Create panel opens
-        if ("CREATE".equals(name)) {
-            // find the CreateAccountPanel and refresh it
-            for (Component c : contentPanel.getComponents()) {
-                if (c instanceof CreateAccountPanel panel) {
-                    panel.refreshAccountNumber();
-                    break;
-                }
-            }
+        // Refresh each panel when navigated to
+        switch (name) {
+            case "CREATE" -> createPanel.refreshAccountNumber();
+            case "TRANSACTION" -> transactionPanel.loadAccountNumbers(this);
+            case "HISTORY" -> historyPanel.loadHistory(this);
         }
     }
 
-    // Panels get the service through MainFrame
     public BankService getBankService() {
         return bankService;
     }

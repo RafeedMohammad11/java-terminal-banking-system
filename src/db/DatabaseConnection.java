@@ -8,43 +8,90 @@ import java.sql.Statement;
 public class DatabaseConnection {
 
     private static final String URL = "JDBC:sqlite:banking.db";
-    private static Connection instance = null;
+    private static volatile Connection instance = null;
+    private static final Object LOCK = new Object();
 
     // Private constructor — no one can instantiate this class
-    private DatabaseConnection() {}
+    private DatabaseConnection() {
+    }
 
     public static Connection getInstance() throws SQLException {
+        // Double-checked locking pattern for thread safety
         if (instance == null || instance.isClosed()) {
-            instance = DriverManager.getConnection(URL);
-            initializeTables(instance);
+            synchronized (LOCK) {
+                if (instance == null || instance.isClosed()) {
+                    instance = DriverManager.getConnection(URL);
+                }
+            }
         }
         return instance;
     }
 
+    /**
+     * Initializes database tables. Should be called once at application startup.
+     */
+    public static void initialize() throws SQLException {
+        Connection conn = getInstance();
+        initializeTables(conn);
+    }
+
+    /**
+     * Begins a transaction on the connection.
+     */
+    public static void beginTransaction() throws SQLException {
+        getInstance().setAutoCommit(false);
+    }
+
+    /**
+     * Commits the current transaction.
+     */
+    public static void commit() throws SQLException {
+        Connection conn = getInstance();
+        if (!conn.getAutoCommit()) {
+            conn.commit();
+            conn.setAutoCommit(true);
+        }
+    }
+
+    /**
+     * Rolls back the current transaction in case of errors.
+     */
+    public static void rollback() {
+        try {
+            Connection conn = getInstance();
+            if (!conn.getAutoCommit()) {
+                conn.rollback();
+                conn.setAutoCommit(true);
+            }
+        } catch (SQLException e) {
+            System.err.println("Error during rollback: " + e.getMessage());
+        }
+    }
+
     private static void initializeTables(Connection conn) throws SQLException {
         String createAccounts = """
-            CREATE TABLE IF NOT EXISTS accounts (
-                account_number TEXT PRIMARY KEY,
-                account_type   TEXT NOT NULL,
-                holder_name    TEXT NOT NULL,
-                email          TEXT,
-                phone          TEXT,
-                balance        REAL NOT NULL DEFAULT 0,
-                overdraft_limit REAL DEFAULT 0,
-                interest_rate   REAL DEFAULT 0
-            );
-        """;
+                    CREATE TABLE IF NOT EXISTS accounts (
+                        account_number TEXT PRIMARY KEY,
+                        account_type   TEXT NOT NULL,
+                        holder_name    TEXT NOT NULL,
+                        email          TEXT,
+                        phone          TEXT,
+                        balance        REAL NOT NULL DEFAULT 0,
+                        overdraft_limit REAL DEFAULT 0,
+                        interest_rate   REAL DEFAULT 0
+                    );
+                """;
 
         String createTransactions = """
-            CREATE TABLE IF NOT EXISTS transactions (
-                id          INTEGER PRIMARY KEY AUTOINCREMENT,
-                account_number TEXT NOT NULL,
-                type        TEXT NOT NULL,
-                amount      REAL NOT NULL,
-                timestamp   TEXT NOT NULL,
-                FOREIGN KEY (account_number) REFERENCES accounts(account_number)
-            );
-        """;
+                    CREATE TABLE IF NOT EXISTS transactions (
+                        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                        account_number TEXT NOT NULL,
+                        type        TEXT NOT NULL,
+                        amount      REAL NOT NULL,
+                        timestamp   TEXT NOT NULL,
+                        FOREIGN KEY (account_number) REFERENCES accounts(account_number)
+                    );
+                """;
 
         try (Statement stmt = conn.createStatement()) {
             stmt.execute(createAccounts);
