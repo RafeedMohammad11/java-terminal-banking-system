@@ -81,6 +81,7 @@ public class DatabaseConnection {
                         balance         REAL NOT NULL DEFAULT 0,
                         overdraft_limit REAL DEFAULT 0,
                         interest_rate   REAL DEFAULT 0,
+                        loan_limit      REAL DEFAULT 0,  
                         nid             TEXT DEFAULT '',
                         address         TEXT DEFAULT ''
                     );
@@ -99,6 +100,7 @@ public class DatabaseConnection {
 
             ensureColumnExists(conn, "accounts", "nid", "TEXT DEFAULT ''");
             ensureColumnExists(conn, "accounts", "address", "TEXT DEFAULT ''");
+            ensureColumnExists(conn, "accounts", "loan_limit", "REAL DEFAULT 0");
         }
     }
 

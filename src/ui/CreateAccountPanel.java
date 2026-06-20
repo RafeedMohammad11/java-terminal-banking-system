@@ -3,6 +3,7 @@ package ui;
 import exception.DuplicateAccountException;
 import model.Account;
 import model.CurrentAccount;
+import model.LoanAccount;
 import model.SavingsAccount;
 import util.AccountNumberGenerator;
 import util.InputValidator;
@@ -23,8 +24,10 @@ public class CreateAccountPanel extends JPanel {
     private final JTextField        balanceField  = UITheme.styledField();
     private final JTextField        extraField    = UITheme.styledField();
     private final JComboBox<String> typeBox       =
-            new JComboBox<>(new String[]{"Savings Account", "Current Account"});
-    private final JLabel extraLabel    = new JLabel("Interest Rate (%):");
+            new JComboBox<>(new String[]{"Savings Account", "Current Account", "Loan Account"});
+    private final JLabel balanceLabel = new JLabel("Initial Balance (BDT):");
+    private final JLabel extraLabel   = new JLabel("Interest Rate (%):");
+
 
     // Error labels
     private final JLabel nameError    = errorLabel();
@@ -60,6 +63,8 @@ public class CreateAccountPanel extends JPanel {
 
         typeBox.setFont(UITheme.FONT_BODY);
         typeBox.setPreferredSize(new Dimension(0, 36));
+        balanceLabel.setFont(UITheme.FONT_BODY);
+        balanceLabel.setForeground(UITheme.TEXT_DARK);
         extraLabel.setFont(UITheme.FONT_BODY);
         extraLabel.setForeground(UITheme.TEXT_DARK);
 
@@ -68,8 +73,8 @@ public class CreateAccountPanel extends JPanel {
         center.setBackground(UITheme.BG);
 
         JPanel card = UITheme.cardPanel();
-        card.setLayout(new GridLayout(16, 2, 12, 4));
-        card.setPreferredSize(new Dimension(560, 580));
+        card.setLayout(new GridLayout(0, 2, 12, 8));
+        card.setPreferredSize(new Dimension(700, 650));
 
         card.add(styledLabel("Account Number:")); card.add(accNumDisplay);
         card.add(new JLabel(""));                 card.add(new JLabel(" "));
@@ -89,22 +94,13 @@ public class CreateAccountPanel extends JPanel {
         card.add(styledLabel("Address:"));        card.add(addressField);
         card.add(new JLabel(""));                 card.add(new JLabel(" "));
 
-        card.add(styledLabel("Initial Balance:")); card.add(balanceField);
+        card.add(balanceLabel);                    card.add(balanceField);
         card.add(new JLabel(""));                  card.add(balanceError);
 
         card.add(styledLabel("Account Type:"));   card.add(typeBox);
         card.add(extraLabel);                     card.add(extraField);
 
-        typeBox.addActionListener(e -> {
-            extraLabel.setText(
-                    typeBox.getSelectedIndex() == 0
-                            ? "Interest Rate (%):"
-                            : "Overdraft Limit (BDT):"
-            );
-            // Re-validate balance when account type changes (minimum balance rule)
-            String bal = balanceField.getText().trim();
-            if (!bal.isBlank()) validate(balanceField, balanceError, "balance");
-        });
+        typeBox.addActionListener(e -> updateTypeSpecificLabels());
 
         center.add(card);
         JScrollPane scrollPane = new JScrollPane(center);
@@ -128,9 +124,11 @@ public class CreateAccountPanel extends JPanel {
         attachLiveValidator(emailField,   emailError,   "email");
         attachLiveValidator(phoneField,   phoneError,   "phone");
         attachLiveValidator(balanceField, balanceError, "balance");
+        attachLiveValidator(extraField,   balanceError, "extra");
 
         // ── Actions ───────────────────────────────────────────
         refreshAccountNumber();
+        updateTypeSpecificLabels();
 
         createBtn.addActionListener(e -> handleCreate(frame));
         clearBtn.addActionListener(e -> {
@@ -165,11 +163,37 @@ public class CreateAccountPanel extends JPanel {
             case "balance" -> {
                 String amtErr = InputValidator.validateAmount(value);
                 if (amtErr != null) yield amtErr;
-                // Savings accounts require a minimum balance of 500
                 if (typeBox.getSelectedIndex() == 0) {
                     try {
                         if (Double.parseDouble(value) < 500)
                             yield "Savings accounts require a minimum of BDT 500";
+                    } catch (NumberFormatException ignored) {}
+                }
+                if (typeBox.getSelectedIndex() == 2) {
+                    try {
+                        double due = Double.parseDouble(value);
+                        String limitText = extraField.getText().trim();
+                        if (!limitText.isBlank()) {
+                            double limit = Double.parseDouble(limitText);
+                            if (due > limit)
+                                yield "Amount due cannot exceed loan limit";
+                        }
+                    } catch (NumberFormatException ignored) {}
+                }
+                yield null;
+            }
+            case "extra" -> {
+                String amtErr = InputValidator.validateAmount(value);
+                if (amtErr != null) yield amtErr;
+                if (typeBox.getSelectedIndex() == 2) {
+                    try {
+                        double limit = Double.parseDouble(value);
+                        String dueText = balanceField.getText().trim();
+                        if (!dueText.isBlank()) {
+                            double due = Double.parseDouble(dueText);
+                            if (due > limit)
+                                yield "Loan limit must be at least the amount due";
+                        }
                     } catch (NumberFormatException ignored) {}
                 }
                 yield null;
@@ -212,7 +236,6 @@ public class CreateAccountPanel extends JPanel {
             UITheme.setFieldError(balanceField, balanceError, balanceErr);
             valid = false;
         } else if (typeBox.getSelectedIndex() == 0) {
-            // Savings: enforce 500 BDT minimum
             try {
                 if (Double.parseDouble(balanceField.getText().trim()) < 500) {
                     UITheme.setFieldError(balanceField, balanceError,
@@ -220,6 +243,22 @@ public class CreateAccountPanel extends JPanel {
                     valid = false;
                 }
             } catch (NumberFormatException ignored) {}
+        } else if (typeBox.getSelectedIndex() == 2) {
+            try {
+                double due = Double.parseDouble(balanceField.getText().trim());
+                double limit = Double.parseDouble(extraField.getText().trim());
+                if (due > limit) {
+                    UITheme.setFieldError(balanceField, balanceError,
+                            "Amount due cannot exceed loan limit");
+                    valid = false;
+                }
+            } catch (NumberFormatException ignored) {}
+        }
+
+        String extraErr = InputValidator.validateAmount(extraField.getText().trim());
+        if (extraErr != null) {
+            UITheme.setFieldError(extraField, balanceError, extraErr);
+            valid = false;
         }
 
         return valid;
@@ -244,10 +283,44 @@ public class CreateAccountPanel extends JPanel {
             double extra   = Double.parseDouble(extraField.getText().trim());
 
             Account account;
+
             if (typeBox.getSelectedIndex() == 0) {
-                account = new SavingsAccount(accNum, name, balance, extra, email, phone, nid, address);
+
+                account = new SavingsAccount(
+                        accNum,
+                        name,
+                        balance,
+                        extra,
+                        email,
+                        phone,
+                        nid,
+                        address
+                );
+
+            } else if (typeBox.getSelectedIndex() == 1) {
+
+                account = new CurrentAccount(
+                        accNum,
+                        name,
+                        email,
+                        phone,
+                        balance,
+                        extra,
+                        nid,
+                        address
+                );
+
             } else {
-                account = new CurrentAccount(accNum, name, email, phone, balance, extra, nid, address);
+                account = new LoanAccount(
+                        accNum,
+                        name,
+                        email,
+                        phone,
+                        balance,
+                        extra,
+                        nid,
+                        address
+                );
             }
 
             frame.getBankService().createAccount(account);
@@ -270,6 +343,32 @@ public class CreateAccountPanel extends JPanel {
     }
 
     // ── Helpers ───────────────────────────────────────────────
+
+    private void updateTypeSpecificLabels() {
+        switch (typeBox.getSelectedIndex()) {
+            case 0 -> {
+                balanceLabel.setText("Initial Balance (BDT):");
+                extraLabel.setText("Interest Rate (%):");
+            }
+            case 1 -> {
+                balanceLabel.setText("Initial Balance (BDT):");
+                extraLabel.setText("Overdraft Limit (BDT):");
+            }
+            case 2 -> {
+                balanceLabel.setText("Amount Due (BDT):");
+                extraLabel.setText("Loan Limit (BDT):");
+            }
+        }
+
+        String bal = balanceField.getText().trim();
+        if (!bal.isBlank()) {
+            validate(balanceField, balanceError, "balance");
+        }
+        String extra = extraField.getText().trim();
+        if (!extra.isBlank()) {
+            validate(extraField, balanceError, "extra");
+        }
+    }
 
     public void refreshAccountNumber() {
         accNumDisplay.setText(AccountNumberGenerator.generate());

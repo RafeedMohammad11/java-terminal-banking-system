@@ -2,6 +2,7 @@ package db;
 
 import model.Account;
 import model.CurrentAccount;
+import model.LoanAccount;
 import model.SavingsAccount;
 
 import java.sql.*;
@@ -13,15 +14,16 @@ public class AccountDAO {
 
     // ── CREATE ──────────────────────────────────────────────
     public void insertAccount(Account account) throws SQLException {
+        // 1. Add 'loan_limit' to the columns list and add an extra '?' placeholder
         String sql = """
-                    INSERT INTO accounts
-                    (account_number, account_type, holder_name, email, phone,
-                     balance, overdraft_limit, interest_rate, nid, address)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """;
+                INSERT INTO accounts
+                (account_number, account_type, holder_name, email, phone,
+                 balance, overdraft_limit, interest_rate, loan_limit, nid, address)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """;
 
         try (Connection conn = DatabaseConnection.getInstance();
-                PreparedStatement stmt = conn.prepareStatement(sql)) {
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setString(1, account.getAccountNumber());
             stmt.setString(2, account.getAccountType());
@@ -29,19 +31,29 @@ public class AccountDAO {
             stmt.setString(4, account.getEmail());
             stmt.setString(5, account.getPhone());
             stmt.setDouble(6, account.getBalance());
-            stmt.setString(9, account.getNid()); // Hidden field
-            stmt.setString(10, account.getAddress()); // Hidden field
 
+            // 2. Set polymorphic fields (overdraft, interest, loan)
             if (account instanceof CurrentAccount ca) {
-                stmt.setDouble(7, ca.getOverDraftLimit());
-                stmt.setDouble(8, 0);
+                stmt.setDouble(7, ca.getOverDraftLimit()); // overdraft_limit
+                stmt.setDouble(8, 0);                      // interest_rate
+                stmt.setDouble(9, 0);                      // loan_limit
             } else if (account instanceof SavingsAccount sa) {
-                stmt.setDouble(7, 0);
-                stmt.setDouble(8, sa.getInterestRate());
+                stmt.setDouble(7, 0);                      // overdraft_limit
+                stmt.setDouble(8, sa.getInterestRate());   // interest_rate
+                stmt.setDouble(9, 0);                      // loan_limit
+            } else if (account instanceof LoanAccount la) {
+                stmt.setDouble(7, 0);                      // overdraft_limit
+                stmt.setDouble(8, 0);                      // interest_rate
+                stmt.setDouble(9, la.getLoanLimit());      // loan_limit
             } else {
                 stmt.setDouble(7, 0);
                 stmt.setDouble(8, 0);
+                stmt.setDouble(9, 0);
             }
+
+            // 3. Set remaining fields at the end
+            stmt.setString(10, account.getNid());
+            stmt.setString(11, account.getAddress());
 
             stmt.executeUpdate();
         }
@@ -87,8 +99,22 @@ public class AccountDAO {
     public void updateAccountState(Account account) throws SQLException {
         if (account instanceof CurrentAccount ca) {
             updateBalanceAndOverdraft(account.getAccountNumber(), account.getBalance(), ca.getOverDraftLimit());
+        } else if (account instanceof LoanAccount la) {
+            updateLoanState(account.getAccountNumber(), la.getAmountDue(), la.getLoanLimit());
         } else {
             updateBalance(account.getAccountNumber(), account.getBalance());
+        }
+    }
+
+    public void updateLoanState(String accountNumber, double amountDue, double loanLimit) throws SQLException {
+        String sql = "UPDATE accounts SET balance = ?, loan_limit = ? WHERE account_number = ?";
+
+        try (Connection conn = DatabaseConnection.getInstance();
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setDouble(1, amountDue);
+            stmt.setDouble(2, loanLimit);
+            stmt.setString(3, accountNumber);
+            stmt.executeUpdate();
         }
     }
 
@@ -184,8 +210,8 @@ public class AccountDAO {
         String email = rs.getString("email");
         String phone = rs.getString("phone");
         double balance = rs.getDouble("balance");
-        String nid = rs.getString("nid"); // Hidden field
-        String address = rs.getString("address"); // Hidden field
+        String nid = rs.getString("nid");
+        String address = rs.getString("address");
 
         return switch (type) {
             case "CurrentAccount" -> new CurrentAccount(
@@ -194,6 +220,10 @@ public class AccountDAO {
             case "SavingsAccount" -> new SavingsAccount(
                     accNum, name, balance,
                     rs.getDouble("interest_rate"), email, phone, nid, address);
+            // ADD THIS CASE:
+            case "LoanAccount" -> new LoanAccount(
+                    accNum, name, email, phone, balance,
+                    rs.getDouble("loan_limit"), nid, address);
             default -> throw new SQLException("Unknown account type: " + type);
         };
     }

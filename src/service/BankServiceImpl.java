@@ -8,7 +8,6 @@ import exception.DuplicateAccountException;
 import exception.InSufficientFundsException;
 import exception.InvalidAmountException;
 import model.Account;
-
 import java.sql.SQLException;
 import java.util.List;
 
@@ -134,6 +133,7 @@ public class BankServiceImpl implements BankService {
             try {
                 Account account = findAccount(accountNumber);
                 account.deposit(amount);
+
                 accountDAO.updateAccountState(account);
                 accountDAO.logTransaction(accountNumber, "DEPOSIT", amount);
                 DatabaseConnection.commit();
@@ -157,6 +157,7 @@ public class BankServiceImpl implements BankService {
             try {
                 Account account = findAccount(accountNumber);
                 account.withdraw(amount);
+
                 accountDAO.updateAccountState(account);
                 accountDAO.logTransaction(accountNumber, "WITHDRAW", amount);
                 DatabaseConnection.commit();

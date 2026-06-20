@@ -2,6 +2,7 @@ package ui;
 
 import model.Account;
 import model.CurrentAccount;
+import model.LoanAccount;
 import model.SavingsAccount;
 
 import javax.swing.*;
@@ -210,6 +211,10 @@ public class AccountListPanel extends JPanel {
             addDetailRow(grid, "Interest Rate", String.format("%.2f%%", sa.getInterestRate()));
         } else if (acc instanceof CurrentAccount ca) {
             addDetailRow(grid, "Overdraft Limit (BDT)", String.format("%.2f", ca.getOverDraftLimit()));
+        } else if (acc instanceof LoanAccount la) {
+            addDetailRow(grid, "Amount Due (BDT)", String.format("%.2f", la.getAmountDue()));
+            addDetailRow(grid, "Loan Limit (BDT)", String.format("%.2f", la.getLoanLimit()));
+            addDetailRow(grid, "Remaining Credit (BDT)", String.format("%.2f", la.getRemainingCredit()));
         }
 
         JScrollPane sp = new JScrollPane(grid);
@@ -251,6 +256,8 @@ public class AccountListPanel extends JPanel {
             return String.format("%.2f%%", sa.getInterestRate());
         } else if (acc instanceof CurrentAccount ca) {
             return String.format("%.2f BDT", ca.getOverDraftLimit());
+        } else if (acc instanceof LoanAccount la) {
+            return String.format("%.2f BDT", la.getLoanLimit());
         }
         return "—";
     }
