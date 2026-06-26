@@ -27,4 +27,11 @@ public interface BankService {
 
         void transfer(String fromAccountNumber, String toAccountNumber, double amount)
                         throws AccountNotFoundException, InvalidAmountException, InSufficientFundsException;
+
+    // Branch Operations
+    void shiftBranch(String accountNumber, String newBranch) throws AccountNotFoundException;
+    void addBranch(String branchName);
+    void removeBranch(String branchName);
+    void updateBranchName(String oldName, String newName);
+    List<String> getAllBranches();
 }

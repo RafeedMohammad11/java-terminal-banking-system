@@ -39,7 +39,7 @@ public class TransactionHistoryPanel extends JPanel {
 
         filterBox = new JComboBox<>(
                 new String[]{"All", "DEPOSIT", "WITHDRAW", "TRANSFER_OUT", "TRANSFER_IN",
-                        "ACCOUNT_CREATED", "UPDATED"});
+                        "ACCOUNT_CREATED", "UPDATED", "SHIFT_BRANCH"});
         UITheme.styleComboBox(filterBox);
         filterBox.setPreferredSize(new Dimension(200, 36));
 
@@ -84,6 +84,7 @@ public class TransactionHistoryPanel extends JPanel {
                                      "TRANSFER_IN"     -> UITheme.WARNING;
                                 case "ACCOUNT_CREATED" -> UITheme.PRIMARY;
                                 case "UPDATED"         -> UITheme.ACCENT;
+                                case "SHIFT_BRANCH"    -> new Color(59, 130, 246);
                                 default                -> UITheme.TEXT_MUTED;
                             });
                             setBackground(row % 2 == 0 ? UITheme.CARD_BG : UITheme.ROW_ALT);

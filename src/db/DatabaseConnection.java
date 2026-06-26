@@ -2,6 +2,7 @@ package db;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -83,7 +84,15 @@ public class DatabaseConnection {
                         interest_rate   REAL DEFAULT 0,
                         loan_limit      REAL DEFAULT 0,  
                         nid             TEXT DEFAULT '',
-                        address         TEXT DEFAULT ''
+                        address         TEXT DEFAULT '',
+                        branch          TEXT DEFAULT ''
+                    );
+                    """);
+
+            stmt.execute("""
+                    CREATE TABLE IF NOT EXISTS branches (
+                        id   INTEGER PRIMARY KEY AUTOINCREMENT,
+                        name TEXT NOT NULL UNIQUE
                     );
                     """);
 
@@ -101,6 +110,24 @@ public class DatabaseConnection {
             ensureColumnExists(conn, "accounts", "nid", "TEXT DEFAULT ''");
             ensureColumnExists(conn, "accounts", "address", "TEXT DEFAULT ''");
             ensureColumnExists(conn, "accounts", "loan_limit", "REAL DEFAULT 0");
+            ensureColumnExists(conn, "accounts", "branch", "TEXT DEFAULT ''");
+
+            // Populate initial branches if table is empty
+            try (ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM branches")) {
+                if (rs.next() && rs.getInt(1) == 0) {
+                    String[] defaultBranches = {
+                        "Dhaka (Banani)", "Dhaka (Dhanmondi)", "Dhaka (Rampura)",
+                        "Chattagram", "Rajshahi", "Sylhet", "Mymensingh"
+                    };
+                    try (PreparedStatement insertBranch = conn.prepareStatement(
+                            "INSERT INTO branches (name) VALUES (?)")) {
+                        for (String b : defaultBranches) {
+                            insertBranch.setString(1, b);
+                            insertBranch.executeUpdate();
+                        }
+                    }
+                }
+            }
         }
     }
 

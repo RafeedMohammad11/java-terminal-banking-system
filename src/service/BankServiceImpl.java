@@ -1,6 +1,7 @@
 package service;
 
 import db.AccountDAO;
+import db.BranchDAO;
 import db.DatabaseConnection;
 import exception.AccountNotFoundException;
 import exception.DatabaseException;
@@ -13,6 +14,7 @@ import java.util.List;
 
 public class BankServiceImpl implements BankService {
     private final AccountDAO accountDAO;
+    private final BranchDAO branchDAO = new BranchDAO();
 
     public BankServiceImpl(AccountDAO accountDAO) {
         if (accountDAO == null) {
@@ -194,6 +196,103 @@ public class BankServiceImpl implements BankService {
             }
         } catch (SQLException e) {
             throw new DatabaseException("Failed to transfer: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public void shiftBranch(String accountNumber, String newBranch) throws AccountNotFoundException {
+        if (newBranch == null || newBranch.isBlank()) {
+            throw new IllegalArgumentException("Please select a destination branch.");
+        }
+
+        String trimmedBranch = newBranch.trim();
+
+        try {
+            Account account = findAccount(accountNumber);
+            String currentBranch = account.getBranch() == null ? "" : account.getBranch().trim();
+
+            if (trimmedBranch.equalsIgnoreCase(currentBranch)) {
+                throw new IllegalStateException("Account is already at branch: " +
+                        (currentBranch.isEmpty() ? "Not assigned" : currentBranch));
+            }
+
+            if (!branchDAO.branchExists(trimmedBranch)) {
+                throw new IllegalArgumentException("Branch '" + trimmedBranch + "' does not exist. "
+                        + "Add it from Manage Branches first.");
+            }
+
+            DatabaseConnection.beginTransaction();
+            try {
+                accountDAO.updateBranch(accountNumber, trimmedBranch);
+                accountDAO.logTransaction(accountNumber, "SHIFT_BRANCH", 0);
+                DatabaseConnection.commit();
+            } catch (Exception e) {
+                DatabaseConnection.rollback();
+                throw e;
+            }
+        } catch (AccountNotFoundException e) {
+            throw e;
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            throw e;
+        } catch (SQLException e) {
+            throw new DatabaseException("Failed to shift branch: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public void addBranch(String branchName) {
+        if (branchName == null || branchName.isBlank()) {
+            throw new IllegalArgumentException("Branch name cannot be empty.");
+        }
+        String trimmed = branchName.trim();
+        try {
+            if (branchDAO.branchExists(trimmed)) {
+                throw new IllegalArgumentException("Branch '" + trimmed + "' already exists.");
+            }
+            branchDAO.addBranch(trimmed);
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (SQLException e) {
+            throw new DatabaseException("Failed to add branch: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public void removeBranch(String branchName) {
+        if (branchName == null || branchName.isBlank()) {
+            throw new IllegalArgumentException("Branch name cannot be empty.");
+        }
+        try {
+            int inUse = branchDAO.countAccountsInBranch(branchName.trim());
+            if (inUse > 0) {
+                throw new IllegalStateException(
+                        "Cannot remove branch '" + branchName + "'. "
+                                + inUse + " account(s) are still assigned to it. "
+                                + "Transfer them first using Shift Branch.");
+            }
+            branchDAO.removeBranch(branchName.trim());
+        } catch (IllegalStateException e) {
+            throw e;
+        } catch (SQLException e) {
+            throw new DatabaseException("Failed to remove branch: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public void updateBranchName(String oldName, String newName) {
+        try {
+            branchDAO.updateBranchName(oldName, newName);
+        } catch (SQLException e) {
+            throw new DatabaseException("Failed to update branch: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public List<String> getAllBranches() {
+        try {
+            return branchDAO.getAllBranches();
+        } catch (SQLException e) {
+            throw new DatabaseException("Failed to get branches: " + e.getMessage(), e);
         }
     }
 }

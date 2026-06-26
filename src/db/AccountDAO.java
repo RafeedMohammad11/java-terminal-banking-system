@@ -18,8 +18,8 @@ public class AccountDAO {
         String sql = """
                 INSERT INTO accounts
                 (account_number, account_type, holder_name, email, phone,
-                 balance, overdraft_limit, interest_rate, loan_limit, nid, address)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 balance, overdraft_limit, interest_rate, loan_limit, nid, address, branch)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """;
 
         try (Connection conn = DatabaseConnection.getInstance();
@@ -54,6 +54,7 @@ public class AccountDAO {
             // 3. Set remaining fields at the end
             stmt.setString(10, account.getNid());
             stmt.setString(11, account.getAddress());
+            stmt.setString(12, account.getBranch());
 
             stmt.executeUpdate();
         }
@@ -163,6 +164,17 @@ public class AccountDAO {
         }
     }
 
+    // ── UPDATE BRANCH ─────────────────────────────────────────
+    public void updateBranch(String accountNumber, String newBranch) throws SQLException {
+        String sql = "UPDATE accounts SET branch = ? WHERE account_number = ?";
+        try (Connection conn = DatabaseConnection.getInstance();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, newBranch != null ? newBranch : "");
+            stmt.setString(2, accountNumber);
+            stmt.executeUpdate();
+        }
+    }
+
     // ── DELETE ────────────────────────────────────────────────
     public void deleteTransactionsForAccount(String accountNumber) throws SQLException {
         String sql = "DELETE FROM transactions WHERE account_number = ?";
@@ -213,17 +225,19 @@ public class AccountDAO {
         String nid = rs.getString("nid");
         String address = rs.getString("address");
 
+        String branch = rs.getString("branch");
+
         return switch (type) {
             case "CurrentAccount" -> new CurrentAccount(
                     accNum, name, email, phone, balance,
-                    rs.getDouble("overdraft_limit"), nid, address);
+                    rs.getDouble("overdraft_limit"), nid, address, branch);
             case "SavingsAccount" -> new SavingsAccount(
                     accNum, name, balance,
-                    rs.getDouble("interest_rate"), email, phone, nid, address);
+                    rs.getDouble("interest_rate"), email, phone, nid, address, branch);
             // ADD THIS CASE:
             case "LoanAccount" -> new LoanAccount(
                     accNum, name, email, phone, balance,
-                    rs.getDouble("loan_limit"), nid, address);
+                    rs.getDouble("loan_limit"), nid, address, branch);
             default -> throw new SQLException("Unknown account type: " + type);
         };
     }

@@ -12,10 +12,10 @@ public class CurrentAccount extends Account {
         this.overDraftLimit = overDraftLimit;
     }
 
-    // Constructor with hidden fields (NID, Address)
+    // Constructor with hidden fields (NID, Address, Branch)
     public CurrentAccount(String accountNumber, String holderName, String email, String phone,
-            double initialBalance, double overDraftLimit, String nid, String address) {
-        super(accountNumber, holderName, email, phone, initialBalance, nid, address);
+            double initialBalance, double overDraftLimit, String nid, String address, String branch) {
+        super(accountNumber, holderName, email, phone, initialBalance, nid, address, branch);
         if (overDraftLimit < 0) {
             throw new IllegalArgumentException("Overdraft limit cannot be negative");
         }

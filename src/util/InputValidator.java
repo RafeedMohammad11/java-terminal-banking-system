@@ -57,11 +57,8 @@ public class InputValidator {
         if (name == null || name.isBlank()) {
             return "Holder name is required.";
         }
-        if (name.trim().length() < 2) {
-            return "Name must be at least 2 characters.";
-        }
-        if (!name.matches("^[a-zA-Z\\s.'-]+$")) {
-            return "Name can only contain letters, spaces, and . ' -";
+        if (!name.matches("^[A-Z\\s]{2,50}$")) {
+            return "Name must be 2-50 characters long and contain only uppercase letters and spaces.";
         }
         return null;
     }

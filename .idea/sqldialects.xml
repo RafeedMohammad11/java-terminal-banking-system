@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="SqlDialectMappings">
+    <file url="file://$PROJECT_DIR$/src/db/AccountDAO.java" dialect="SQLite" />
+    <file url="file://$PROJECT_DIR$/src/db/DatabaseConnection.java" dialect="SQLite" />
+    <file url="file://$PROJECT_DIR$/src/db/schema.sql" dialect="SQLite" />
+    <file url="PROJECT" dialect="SQLite" />
+  </component>
+  <component name="SqlResolveScope">
+    <option name="projectScope">
+      <SqlScopeProvider mappingId="fe1b10f7-889a-4993-9e74-f75afc808602" />
+    </option>
+    <option name="scopes">
+      <list>
+        <SqlScopeMapping>
+          <option name="dataSourceId" value="fe1b10f7-889a-4993-9e74-f75afc808602" />
+          <option name="files">
+            <list>
+              <option value="file://$PROJECT_DIR$/src/db" />
+            </list>
+          </option>
+        </SqlScopeMapping>
+      </list>
+    </option>
+  </component>
+</project>

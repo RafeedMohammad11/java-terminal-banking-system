@@ -18,6 +18,7 @@ public class AccountListPanel extends JPanel {
     private final DefaultTableModel tableModel;
     private final JTable            table;
     private TableRowSorter<DefaultTableModel> sorter;
+    private final JComboBox<String> branchFilterBox = new JComboBox<>();
 
     // Keep the full account list so we can look up details on click
     private List<Account> allAccounts;
@@ -51,11 +52,31 @@ public class AccountListPanel extends JPanel {
         searchIcon.setForeground(Color.WHITE);
         searchIcon.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 8));
 
+        branchFilterBox.setFont(UITheme.FONT_BODY);
+        branchFilterBox.setPreferredSize(new Dimension(150, 32));
+        branchFilterBox.addItem("All Branches");
+        
+        JLabel filterIcon = new JLabel("🏢 Branch:");
+        filterIcon.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        filterIcon.setForeground(Color.WHITE);
+        filterIcon.setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 8));
+
+        JPanel filterPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        filterPanel.setOpaque(false);
+        filterPanel.add(filterIcon);
+        filterPanel.add(branchFilterBox);
+
         JPanel searchPanel = new JPanel(new BorderLayout());
         searchPanel.setBackground(UITheme.HEADER_BG);
         searchPanel.add(searchIcon, BorderLayout.WEST);
         searchPanel.add(searchField, BorderLayout.CENTER);
-        topBar.add(searchPanel, BorderLayout.EAST);
+        
+        JPanel controlsPanel = new JPanel(new BorderLayout());
+        controlsPanel.setOpaque(false);
+        controlsPanel.add(filterPanel, BorderLayout.WEST);
+        controlsPanel.add(searchPanel, BorderLayout.EAST);
+        
+        topBar.add(controlsPanel, BorderLayout.EAST);
 
         add(topBar, BorderLayout.NORTH);
 
@@ -129,10 +150,11 @@ public class AccountListPanel extends JPanel {
 
         // ── Live search ───────────────────────────────────────
         searchField.getDocument().addDocumentListener(new DocumentListener() {
-            public void insertUpdate(DocumentEvent e) { applyFilter(searchField.getText()); }
-            public void removeUpdate(DocumentEvent e) { applyFilter(searchField.getText()); }
-            public void changedUpdate(DocumentEvent e) { applyFilter(searchField.getText()); }
+            public void insertUpdate(DocumentEvent e) { applyFilter(searchField.getText(), (String) branchFilterBox.getSelectedItem()); }
+            public void removeUpdate(DocumentEvent e) { applyFilter(searchField.getText(), (String) branchFilterBox.getSelectedItem()); }
+            public void changedUpdate(DocumentEvent e) { applyFilter(searchField.getText(), (String) branchFilterBox.getSelectedItem()); }
         });
+        branchFilterBox.addActionListener(e -> applyFilter(searchField.getText(), (String) branchFilterBox.getSelectedItem()));
 
         refreshBtn.addActionListener(e -> loadAccounts(frame));
         backBtn.addActionListener(e -> frame.showPanel("DASHBOARD"));
@@ -143,6 +165,17 @@ public class AccountListPanel extends JPanel {
     // ── Load data ─────────────────────────────────────────────
 
     public void loadAccounts(MainFrame frame) {
+        // Reload branches
+        Object selected = branchFilterBox.getSelectedItem();
+        branchFilterBox.removeAllItems();
+        branchFilterBox.addItem("All Branches");
+        for (String b : frame.getBankService().getAllBranches()) {
+            branchFilterBox.addItem(b);
+        }
+        if (selected != null) {
+            branchFilterBox.setSelectedItem(selected);
+        }
+
         tableModel.setRowCount(0);
         allAccounts = frame.getBankService().getAllAccounts();
         for (Account acc : allAccounts) {
@@ -161,12 +194,31 @@ public class AccountListPanel extends JPanel {
 
     // ── Search filter ─────────────────────────────────────────
 
-    private void applyFilter(String text) {
-        if (text == null || text.isBlank()) {
-            sorter.setRowFilter(null);
-        } else {
-            sorter.setRowFilter(RowFilter.regexFilter("(?i)" + text));
-        }
+    private void applyFilter(String text, String branch) {
+        RowFilter<DefaultTableModel, Object> filter = new RowFilter<>() {
+            @Override
+            public boolean include(Entry<? extends DefaultTableModel, ? extends Object> entry) {
+                int modelRow = (Integer) entry.getIdentifier();
+                Account acc = allAccounts.get(modelRow);
+
+                boolean matchText = true;
+                if (text != null && !text.isBlank()) {
+                    String search = text.toLowerCase();
+                    matchText = acc.getAccountNumber().toLowerCase().contains(search) ||
+                                acc.getHolderName().toLowerCase().contains(search) ||
+                                (acc.getEmail() != null && acc.getEmail().toLowerCase().contains(search)) ||
+                                (acc.getPhone() != null && acc.getPhone().toLowerCase().contains(search));
+                }
+
+                boolean matchBranch = true;
+                if (branch != null && !branch.equals("All Branches")) {
+                    matchBranch = branch.equalsIgnoreCase(acc.getBranch());
+                }
+
+                return matchText && matchBranch;
+            }
+        };
+        sorter.setRowFilter(filter);
     }
 
     // ── Detail dialog ─────────────────────────────────────────
@@ -205,6 +257,7 @@ public class AccountListPanel extends JPanel {
         addDetailRow(grid, "Phone",           acc.getPhone());
         addDetailRow(grid, "NID",             blankIfEmpty(acc.getNid()));
         addDetailRow(grid, "Address",         blankIfEmpty(acc.getAddress()));
+        addDetailRow(grid, "Branch",          blankIfEmpty(acc.getBranch()));
         addDetailRow(grid, "Balance (BDT)",   String.format("%.2f", acc.getBalance()));
 
         if (acc instanceof SavingsAccount sa) {
@@ -224,15 +277,21 @@ public class AccountListPanel extends JPanel {
         // Action buttons
         JPanel btnBar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 10));
         btnBar.setBackground(UITheme.BG);
-        JButton editBtn = UITheme.accentButton("Edit Account");
+        JButton editBtn   = UITheme.accentButton("Edit Account");
+        JButton shiftBtn  = UITheme.primaryButton("Shift Branch");
         JButton deleteBtn = UITheme.dangerButton("Close Account");
-        JButton closeBtn = UITheme.ghostButton("Close");
-        editBtn.setPreferredSize(new Dimension(130, 36));
+        JButton closeBtn  = UITheme.ghostButton("Close");
+        editBtn.setPreferredSize(new Dimension(120, 36));
+        shiftBtn.setPreferredSize(new Dimension(130, 36));
         deleteBtn.setPreferredSize(new Dimension(140, 36));
         closeBtn.setPreferredSize(new Dimension(100, 36));
         editBtn.addActionListener(e -> {
             dialog.dispose();
             frame.showUpdatePanel(acc);
+        });
+        shiftBtn.addActionListener(e -> {
+            dialog.dispose();
+            frame.showShiftBranchPanel(acc);
         });
         deleteBtn.addActionListener(e -> {
             dialog.dispose();
@@ -240,11 +299,12 @@ public class AccountListPanel extends JPanel {
         });
         closeBtn.addActionListener(e -> dialog.dispose());
         btnBar.add(editBtn);
+        btnBar.add(shiftBtn);
         btnBar.add(deleteBtn);
         btnBar.add(closeBtn);
         dialog.add(btnBar, BorderLayout.SOUTH);
 
-        dialog.setSize(480, 420);
+        dialog.setSize(520, 460);
         dialog.setLocationRelativeTo(this);
         dialog.setVisible(true);
     }

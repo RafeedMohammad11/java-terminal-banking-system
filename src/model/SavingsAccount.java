@@ -4,22 +4,23 @@ public class SavingsAccount extends Account {
 
     private double interestRate;
 
+    // Legacy constructor
     public SavingsAccount(String accountNumber, String holderName, String email, String phone, double initialBalance) {
-        super(accountNumber, holderName, email, phone, initialBalance);
+        super(accountNumber, holderName, email, phone, initialBalance, "", "", "");
         this.interestRate = 0.0;
     }
 
-    // Constructor with hidden fields (NID, Address)
+    // Constructor with hidden fields (NID, Address, Branch)
     public SavingsAccount(String accountNumber, String holderName, String email, String phone,
-            double initialBalance, String nid, String address) {
-        super(accountNumber, holderName, email, phone, initialBalance, nid, address);
+            double initialBalance, String nid, String address, String branch) {
+        super(accountNumber, holderName, email, phone, initialBalance, nid, address, branch);
         this.interestRate = 0.0;
     }
 
     // Constructor used by DAO when loading from DB with all fields
     public SavingsAccount(String accountNumber, String holderName, double balance, double interestRate,
-            String email, String phone, String nid, String address) {
-        super(accountNumber, holderName, email, phone, balance, nid, address);
+            String email, String phone, String nid, String address, String branch) {
+        super(accountNumber, holderName, email, phone, balance, nid, address, branch);
         this.interestRate = interestRate;
     }
 

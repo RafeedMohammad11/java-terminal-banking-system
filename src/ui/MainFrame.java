@@ -21,6 +21,7 @@ public class MainFrame extends JFrame {
     private final TransactionHistoryPanel historyPanel = new TransactionHistoryPanel(this);
     private final UpdateAccountPanel updatePanel = new UpdateAccountPanel(this);
     private final DeleteAccountPanel deletePanel = new DeleteAccountPanel(this);
+    private final ShiftBranchPanel shiftBranchPanel = new ShiftBranchPanel(this);
 
     public MainFrame() {
         try {
@@ -46,6 +47,7 @@ public class MainFrame extends JFrame {
         contentPanel.add(transactionPanel, "TRANSACTION");
         contentPanel.add(updatePanel, "UPDATE");
         contentPanel.add(deletePanel, "DELETE");
+        contentPanel.add(shiftBranchPanel, "SHIFT_BRANCH");
         contentPanel.add(historyPanel, "HISTORY");
 
         add(contentPanel, BorderLayout.CENTER);
@@ -65,13 +67,22 @@ public class MainFrame extends JFrame {
 
         // Refresh each panel when navigated to
         switch (name) {
-            case "CREATE"      -> createPanel.refreshAccountNumber();
+            case "CREATE" -> {
+                createPanel.refreshAccountNumber();
+                createPanel.refreshBranches(this);
+            }
             case "LIST"        -> listPanel.loadAccounts(this);
             case "TRANSACTION" -> transactionPanel.loadAccountNumbers(this);
             case "HISTORY"     -> historyPanel.loadHistory(this);
             case "UPDATE"      -> updatePanel.prepare(this, null);
             case "DELETE"      -> deletePanel.prepare(this, null);
+            case "SHIFT_BRANCH"-> shiftBranchPanel.prepare(this, null);
         }
+    }
+
+    public void showShiftBranchPanel(model.Account account) {
+        shiftBranchPanel.prepare(this, account);
+        cardLayout.show(contentPanel, "SHIFT_BRANCH");
     }
 
     public void showUpdatePanel(model.Account account) {

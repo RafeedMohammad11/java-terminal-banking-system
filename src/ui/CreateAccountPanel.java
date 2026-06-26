@@ -25,6 +25,7 @@ public class CreateAccountPanel extends JPanel {
     private final JTextField        extraField    = UITheme.styledField();
     private final JComboBox<String> typeBox       =
             new JComboBox<>(new String[]{"Savings Account", "Current Account", "Loan Account"});
+    private final JComboBox<String> branchBox     = new JComboBox<>();
     private final JLabel balanceLabel = new JLabel("Initial Balance (BDT):");
     private final JLabel extraLabel   = new JLabel("Interest Rate (%):");
 
@@ -63,6 +64,8 @@ public class CreateAccountPanel extends JPanel {
 
         typeBox.setFont(UITheme.FONT_BODY);
         typeBox.setPreferredSize(new Dimension(0, 36));
+        branchBox.setFont(UITheme.FONT_BODY);
+        branchBox.setPreferredSize(new Dimension(0, 36));
         balanceLabel.setFont(UITheme.FONT_BODY);
         balanceLabel.setForeground(UITheme.TEXT_DARK);
         extraLabel.setFont(UITheme.FONT_BODY);
@@ -98,6 +101,7 @@ public class CreateAccountPanel extends JPanel {
         card.add(new JLabel(""));                  card.add(balanceError);
 
         card.add(styledLabel("Account Type:"));   card.add(typeBox);
+        card.add(styledLabel("Branch:"));         card.add(branchBox);
         card.add(extraLabel);                     card.add(extraField);
 
         typeBox.addActionListener(e -> updateTypeSpecificLabels());
@@ -279,6 +283,7 @@ public class CreateAccountPanel extends JPanel {
             String phone   = phoneField.getText().trim();
             String nid     = nidField.getText().trim();
             String address = addressField.getText().trim();
+            String branch  = (String) branchBox.getSelectedItem();
             double balance = Double.parseDouble(balanceField.getText().trim());
             double extra   = Double.parseDouble(extraField.getText().trim());
 
@@ -294,7 +299,8 @@ public class CreateAccountPanel extends JPanel {
                         email,
                         phone,
                         nid,
-                        address
+                        address,
+                        branch
                 );
 
             } else if (typeBox.getSelectedIndex() == 1) {
@@ -307,7 +313,8 @@ public class CreateAccountPanel extends JPanel {
                         balance,
                         extra,
                         nid,
-                        address
+                        address,
+                        branch
                 );
 
             } else {
@@ -319,7 +326,8 @@ public class CreateAccountPanel extends JPanel {
                         balance,
                         extra,
                         nid,
-                        address
+                        address,
+                        branch
                 );
             }
 
@@ -372,6 +380,14 @@ public class CreateAccountPanel extends JPanel {
 
     public void refreshAccountNumber() {
         accNumDisplay.setText(AccountNumberGenerator.generate());
+    }
+
+    public void refreshBranches(MainFrame frame) {
+        branchBox.removeAllItems();
+        java.util.List<String> branches = frame.getBankService().getAllBranches();
+        for (String b : branches) {
+            branchBox.addItem(b);
+        }
     }
 
     private void clearFields() {

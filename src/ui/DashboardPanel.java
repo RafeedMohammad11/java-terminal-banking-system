@@ -77,7 +77,7 @@ public class DashboardPanel extends JPanel {
         sectionLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 12, 0));
         gridWrapper.add(sectionLabel, BorderLayout.NORTH);
 
-        JPanel grid = new JPanel(new GridLayout(2, 4, 14, 14));
+        JPanel grid = new JPanel(new GridLayout(3, 3, 14, 14));
         grid.setBackground(UITheme.BG);
 
         JButton openBtn    = UITheme.navCard("➕", "Open Account",
@@ -92,8 +92,10 @@ public class DashboardPanel extends JPanel {
                 "Edit account details", new Color(20, 184, 166));
         JButton deleteBtn  = UITheme.navCard("🗑️", "Close Account",
                 "Remove an account", UITheme.DANGER);
-        JButton reportBtn  = UITheme.navCard("📊", "Statement",
-                "Account mini-statement", new Color(59, 130, 246));
+        JButton shiftBtn   = UITheme.navCard("🔀", "Shift Branch",
+                "Transfer account to branch", new Color(59, 130, 246));
+        JButton branchBtn  = UITheme.navCard("🏢", "Branches",
+                "Manage branches", new Color(245, 158, 11));
         JButton exitBtn    = UITheme.navCard("🚪", "Exit",
                 "Close application", new Color(100, 116, 139));
 
@@ -103,7 +105,8 @@ public class DashboardPanel extends JPanel {
         grid.add(historyBtn);
         grid.add(updateBtn);
         grid.add(deleteBtn);
-        grid.add(reportBtn);
+        grid.add(shiftBtn);
+        grid.add(branchBtn);
         grid.add(exitBtn);
 
         gridWrapper.add(grid, BorderLayout.CENTER);
@@ -133,7 +136,8 @@ public class DashboardPanel extends JPanel {
         historyBtn.addActionListener(e -> frame.showPanel("HISTORY"));
         updateBtn.addActionListener(e  -> frame.showPanel("UPDATE"));
         deleteBtn.addActionListener(e  -> frame.showPanel("DELETE"));
-        reportBtn.addActionListener(e  -> frame.showPanel("STATEMENT"));
+        shiftBtn.addActionListener(e   -> frame.showPanel("SHIFT_BRANCH"));
+        branchBtn.addActionListener(e -> new ManageBranchesDialog(frame, frame.getBankService()).setVisible(true));
         exitBtn.addActionListener(e -> {
             DatabaseConnection.close();
             System.exit(0);

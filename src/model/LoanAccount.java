@@ -24,8 +24,8 @@ public class LoanAccount extends Account {
     }
 
     public LoanAccount(String accountNumber, String holderName, String email, String phone,
-                       double amountDue, double loanLimit, String nid, String address) {
-        super(accountNumber, holderName, email, phone, amountDue, nid, address);
+                       double amountDue, double loanLimit, String nid, String address, String branch) {
+        super(accountNumber, holderName, email, phone, amountDue, nid, address, branch);
         if (loanLimit < 0) {
             throw new IllegalArgumentException("Loan limit cannot be negative");
         }

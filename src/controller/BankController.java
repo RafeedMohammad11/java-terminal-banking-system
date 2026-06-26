@@ -140,7 +140,7 @@ public class BankController {
                     throw new IllegalArgumentException("Initial balance cannot be negative");
             });
 
-            SavingsAccount account = new SavingsAccount(accountNumber, holderName, email, phone, balance, nid, address);
+            SavingsAccount account = new SavingsAccount(accountNumber, holderName, email, phone, balance, nid, address, "Dhaka (Banani)");
             bankService.createAccount(account);
             System.out.println("Savings account created successfully.");
         } catch (OperationCancelledException e) {
@@ -175,7 +175,7 @@ public class BankController {
             });
 
             CurrentAccount account = new CurrentAccount(accountNumber, holderName, email, phone, balance,
-                    overdraftLimit, nid, address);
+                    overdraftLimit, nid, address, "Dhaka (Banani)");
             bankService.createAccount(account);
             System.out.println("Current account created successfully.");
         } catch (OperationCancelledException e) {
